@@ -8,6 +8,10 @@ test_that("run_glm_auto linear regression works", {
   expect_s3_class(result, "data.frame")
   expect_true("Variable" %in% names(result))
   expect_true(grepl("Beta", names(result)[2]))
+  expect_equal(
+    attr(result, "medstats_regression_footnotes"),
+    c(`1` = "Univariable analysis.", `2` = "Multivariable analysis.")
+  )
 })
 
 test_that("run_glm_auto adjusted results match glm", {
@@ -34,8 +38,8 @@ test_that("run_glm_auto adjusted results match glm", {
     model_summary["hp", "Estimate"] + critical_value * model_summary["hp", "Std. Error"]
   )
 
-  expect_equal(result$Pvalue_多因素[result$Variable == "hp"], hp_p)
-  expect_equal(result$`Beta(95%CI)_多因素`[result$Variable == "hp"], hp_ci)
+  expect_equal(result$`P value [2]`[result$Variable == "hp"], hp_p)
+  expect_equal(result$`Beta (95% CI) [2]`[result$Variable == "hp"], hp_ci)
 })
 
 test_that("run_glm_auto logistic regression works", {
@@ -80,8 +84,8 @@ test_that("run_glm_auto logistic Wald confidence intervals match Wald p-values",
     exp(coefficient + critical_value * std_error)
   )
 
-  expect_equal(result$Pvalue_多因素[result$Variable == "x1"], expected_p)
-  expect_equal(result$`OR(95%CI)_多因素`[result$Variable == "x1"], expected_ci)
+  expect_equal(result$`P value [2]`[result$Variable == "x1"], expected_p)
+  expect_equal(result$`OR (95% CI) [2]`[result$Variable == "x1"], expected_ci)
 })
 
 test_that("run_glm_auto reports model-specific factor reference levels", {
@@ -101,9 +105,9 @@ test_that("run_glm_auto reports model-specific factor reference levels", {
     family = "binomial"
   )
 
-  expect_equal(result$`OR(95%CI)_单因素`[result$Variable == "A"], "1 (Ref)")
-  expect_true(is.na(result$`OR(95%CI)_多因素`[result$Variable == "A"]))
-  expect_equal(result$`OR(95%CI)_多因素`[result$Variable == "B"], "1 (Ref)")
+  expect_equal(result$`OR (95% CI) [1]`[result$Variable == "A"], "1 (Ref)")
+  expect_true(is.na(result$`OR (95% CI) [2]`[result$Variable == "A"]))
+  expect_equal(result$`OR (95% CI) [2]`[result$Variable == "B"], "1 (Ref)")
 })
 
 test_that("run_cox_auto works", {
@@ -119,6 +123,16 @@ test_that("run_cox_auto works", {
   expect_s3_class(result, "data.frame")
   expect_true("Variable" %in% names(result))
   expect_true(grepl("HR", names(result)[2]))
+  expect_equal(
+    names(result),
+    c(
+      "Variable",
+      "HR (95% CI) [1]",
+      "P value [1]",
+      "HR (95% CI) [2]",
+      "P value [2]"
+    )
+  )
 })
 
 test_that("longdata_analysis works with 2 groups", {

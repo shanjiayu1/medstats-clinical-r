@@ -3,6 +3,8 @@
 #' @description
 #' Applies a unified formatting scheme to a flextable, gtsummary, or data.frame object,
 #' producing a clean three-line table (三线表) suitable for academic publications.
+#' Regression results returned by [run_glm_auto()] and [run_cox_auto()] receive
+#' superscript model markers in their headers and English footnotes below the table.
 #'
 #' @param ft_data A `flextable`, `gtsummary`, or `data.frame` object to format.
 #'
@@ -22,6 +24,12 @@
 #'
 #' @export
 format_flextable <- function(ft_data) {
+  regression_footnotes <- attr(
+    ft_data,
+    "medstats_regression_footnotes",
+    exact = TRUE
+  )
+
   # 判断输入类型
   if (inherits(ft_data, "flextable")) {
     ft <- ft_data
@@ -34,7 +42,7 @@ format_flextable <- function(ft_data) {
     n_cols <- ncol(ft_data)
   }
 
-  ft |>
+  ft <- ft |>
     flextable::font(fontname = "Times New Roman", part = "all") |>
     flextable::fontsize(size = 9, part = "body") |>
     flextable::fontsize(size = 10, part = "header") |>
@@ -48,6 +56,51 @@ format_flextable <- function(ft_data) {
     flextable::autofit() |>
     flextable::set_table_properties(width = 1, layout = "autofit") |>
     flextable::line_spacing(space = 1, part = "all")
+
+  if (!is.null(regression_footnotes)) {
+    header_pattern <- "^(.*) \\[([0-9]+)\\]$"
+    marked_columns <- grep(header_pattern, ft$body$col_keys, value = TRUE)
+
+    for (column in marked_columns) {
+      header_label <- sub(header_pattern, "\\1", column)
+      marker <- sub(header_pattern, "\\2", column)
+      ft <- flextable::compose(
+        ft,
+        j = column,
+        part = "header",
+        value = flextable::as_paragraph(
+          flextable::as_chunk(header_label),
+          flextable::as_sup(marker)
+        )
+      )
+    }
+
+    footer_values <- paste(
+      names(regression_footnotes),
+      unname(regression_footnotes)
+    )
+    ft <- flextable::add_footer_lines(ft, values = footer_values)
+
+    for (i in seq_along(regression_footnotes)) {
+      ft <- flextable::compose(
+        ft,
+        i = i,
+        j = 1,
+        part = "footer",
+        value = flextable::as_paragraph(
+          flextable::as_sup(names(regression_footnotes)[i]),
+          flextable::as_chunk(paste0(" ", unname(regression_footnotes[i])))
+        )
+      )
+    }
+
+    ft <- ft |>
+      flextable::align(align = "left", part = "footer") |>
+      flextable::fontsize(size = 8, part = "footer") |>
+      flextable::font(fontname = "Times New Roman", part = "footer")
+  }
+
+  ft
 }
 
 

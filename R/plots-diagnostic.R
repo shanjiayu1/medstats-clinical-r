@@ -95,6 +95,9 @@ plot_rcs <- function(data,
   } else {
     rcs_term
   }
+  if (model_type == "cox" && grepl("^\\s*Surv\\s*\\(", outcome)) {
+    outcome <- sub("Surv\\s*\\(", "survival::Surv(", outcome)
+  }
   fml <- as.formula(paste(outcome, "~", rhs))
 
   # 拟合模型
@@ -209,9 +212,13 @@ plot_rcs <- function(data,
 #' @param data A data frame.
 #' @param true_var Character string. Name of the true binary outcome variable (0/1).
 #' @param pred_var Character string. Name of the predicted probability variable.
-#' @param title Character string. Plot title. Default is `"ROC 曲线"`.
+#' @param title Character string. Plot title. Default is `"ROC curve"`.
 #' @param line_color Character string. ROC curve color. Default is `"#2E86AB"`.
 #' @param show_print Logical. Whether to print statistics to console. Default is `TRUE`.
+#' @param xlab Character string. X-axis label. Default is
+#'   `"1 - Specificity (False Positive Rate)"`.
+#' @param ylab Character string. Y-axis label. Default is
+#'   `"Sensitivity (True Positive Rate)"`.
 #'
 #' @return Invisibly returns a list with:
 #'   - `roc_obj`: the pROC roc object
@@ -232,9 +239,11 @@ plot_rcs <- function(data,
 plot_roc <- function(data,
                      true_var,
                      pred_var,
-                     title = "ROC 曲线",
+                     title = "ROC curve",
                      line_color = "#2E86AB",
-                     show_print = TRUE) {
+                     show_print = TRUE,
+                     xlab = "1 - Specificity (False Positive Rate)",
+                     ylab = "Sensitivity (True Positive Rate)") {
 
   y_true <- data[[true_var]]
   y_pred <- data[[pred_var]]
@@ -263,15 +272,15 @@ plot_roc <- function(data,
   })
 
   if (show_print) {
-    cat(sprintf("========== %s 性能评估 ==========\n", title))
+    cat(sprintf("========== %s Performance Evaluation ==========\n", title))
     cat(sprintf("AUC: %.4f\n", auc_val))
     cat(sprintf("95%% CI: %.4f - %.4f\n", ci_val[1], ci_val[3]))
-    cat(sprintf("\n最佳截断值(约登指数): %.4f\n", best_thresh$threshold))
-    cat(sprintf("对应的敏感度: %.4f\n", best_thresh$sensitivity))
-    cat(sprintf("对应的特异度: %.4f\n\n", best_thresh$specificity))
-    cat("Hosmer-Lemeshow 检验:\n")
+    cat(sprintf("\nOptimal cutoff (Youden index): %.4f\n", best_thresh$threshold))
+    cat(sprintf("Sensitivity: %.4f\n", best_thresh$sensitivity))
+    cat(sprintf("Specificity: %.4f\n\n", best_thresh$specificity))
+    cat("Hosmer-Lemeshow test:\n")
     if (is.na(hl_test$p.value)) {
-      cat("  测试失败 (可能因样本量或预测概率分布问题)\n\n")
+      cat("  Test failed (possibly due to sample size or predicted probability distribution).\n\n")
     } else {
       cat(sprintf("  Chi-square: %.4f\n", hl_test$statistic))
       cat(sprintf("  P-value: %.4f\n\n", hl_test$p.value))
@@ -284,7 +293,7 @@ plot_roc <- function(data,
   )
 
   hl_p_str <- ifelse(is.na(hl_test$p.value), "NA", sprintf("%.3f", hl_test$p.value))
-  anno_text <- sprintf("AUC = %.3f\n95%% CI: %.3f - %.3f\nH-L 检验 p = %s",
+  anno_text <- sprintf("AUC = %.3f\n95%% CI: %.3f - %.3f\nH-L test p = %s",
                        auc_val, ci_val[1], ci_val[3], hl_p_str)
 
   p <- ggplot2::ggplot(roc_data, ggplot2::aes(x = 1 - specificity, y = sensitivity)) +
@@ -292,9 +301,7 @@ plot_roc <- function(data,
     ggplot2::geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray50") +
     ggplot2::annotate("text", x = 0.55, y = 0.25, label = anno_text,
                        size = 4, hjust = 0, vjust = 1, color = "#333333") +
-    ggplot2::labs(title = title,
-                  x = "1 - 特异度 (假阳性率)",
-                  y = "敏感度 (真阳性率)") +
+    ggplot2::labs(title = title, x = xlab, y = ylab) +
     ggplot2::theme_classic(base_size = 12) +
     ggplot2::theme(
       plot.title = ggplot2::element_text(hjust = 0.5, face = "bold"),

@@ -24,11 +24,14 @@ Default is \code{"binomial"}.}
 A data frame with columns:
 \itemize{
 \item \code{Variable}: variable name and factor levels
-\item \verb{OR(95\%CI)_单因素} or \verb{Beta(95\%CI)_单因素}: univariate estimate (95\% CI)
-\item \code{Pvalue_单因素}: univariate p-value
-\item \verb{OR(95\%CI)_多因素} or \verb{Beta(95\%CI)_多因素}: multivariate estimate (95\% CI)
-\item \code{Pvalue_多因素}: multivariate p-value
+\item \verb{OR (95\% CI) [1]} or \verb{Beta (95\% CI) [1]}: univariable estimate
+\item \verb{P value [1]}: univariable p-value
+\item \verb{OR (95\% CI) [2]} or \verb{Beta (95\% CI) [2]}: multivariable estimate
+\item \verb{P value [2]}: multivariable p-value
 }
+
+Passing the result to \code{\link[=format_flextable]{format_flextable()}} renders \verb{[1]} and \verb{[2]} as
+superscript markers and adds English model footnotes below the table.
 }
 \description{
 Performs both univariate and multivariate GLM regression for a set of variables,

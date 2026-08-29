@@ -112,12 +112,53 @@ test_that("plot_roc returns list with correct elements", {
     data = mtcars2,
     true_var = "am",
     pred_var = "pred_prob",
-    show_print = FALSE
+    title = "Training ROC curve",
+    show_print = FALSE,
+    xlab = "1 - Specificity",
+    ylab = "Sensitivity"
   )
   expect_type(result, "list")
   expect_true("auc" %in% names(result))
   expect_true("plot" %in% names(result))
   expect_true(result$auc > 0.5)
+  expect_s3_class(result$hl_test, "htest")
+  expect_false(is.na(result$hl_test$p.value))
+  expect_equal(result$plot$labels$x, "1 - Specificity")
+  expect_equal(result$plot$labels$y, "Sensitivity")
+
+  plot_data <- ggplot2::ggplot_build(result$plot)$data
+  expect_match(plot_data[[3]]$label, "H-L test p =", fixed = TRUE)
+  expect_false(any(grepl("检验", plot_data[[3]]$label, fixed = TRUE)))
+
+  default_result <- plot_roc(
+    data = mtcars2,
+    true_var = "am",
+    pred_var = "pred_prob",
+    show_print = FALSE
+  )
+  expect_equal(default_result$plot$labels$title, "ROC curve")
+  expect_equal(
+    default_result$plot$labels$x,
+    "1 - Specificity (False Positive Rate)"
+  )
+  expect_equal(
+    default_result$plot$labels$y,
+    "Sensitivity (True Positive Rate)"
+  )
+
+  console_output <- capture.output(
+    plot_roc(
+      data = mtcars2,
+      true_var = "am",
+      pred_var = "pred_prob",
+      show_print = TRUE
+    )
+  )
+  expect_match(
+    paste(console_output, collapse = "\n"),
+    "Performance Evaluation",
+    fixed = TRUE
+  )
 })
 
 test_that("plot_rcs returns list with plot", {
@@ -130,6 +171,25 @@ test_that("plot_rcs returns list with plot", {
   )
   expect_type(result, "list")
   expect_true("plot" %in% names(result))
+  expect_s3_class(result$plot, "ggplot")
+})
+
+test_that("plot_rcs resolves Surv for Cox models", {
+  skip_if_not_installed("rms")
+  lung_rcs <- survival::lung
+  lung_rcs$status_event <- as.integer(lung_rcs$status == 2)
+
+  result <- plot_rcs(
+    data = lung_rcs,
+    exposure = "age",
+    outcome = "Surv(time, status_event)",
+    covars = c("sex", "ph.ecog"),
+    model_type = "cox",
+    ylab = "Hazard ratio"
+  )
+
+  expect_type(result, "list")
+  expect_s3_class(result$fit, "cph")
   expect_s3_class(result$plot, "ggplot")
 })
 

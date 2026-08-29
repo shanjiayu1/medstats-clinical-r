@@ -31,13 +31,13 @@ Imports:
     forestplot,
     ggalluvial,
     pROC,
+    ResourceSelection,
     scales,
     officer
 Suggests:
     testthat (>= 3.0.0),
     knitr,
     rmarkdown,
-    ResourceSelection,
     nlme,
     TH.data
 Config/testthat/edition: 3

@@ -190,10 +190,13 @@ longdata_analysis <- function(data,
 #'
 #' @return A data frame with columns:
 #'   - `Variable`: variable name and factor levels
-#'   - `OR(95%CI)_单因素` or `Beta(95%CI)_单因素`: univariate estimate (95% CI)
-#'   - `Pvalue_单因素`: univariate p-value
-#'   - `OR(95%CI)_多因素` or `Beta(95%CI)_多因素`: multivariate estimate (95% CI)
-#'   - `Pvalue_多因素`: multivariate p-value
+#'   - `OR (95% CI) [1]` or `Beta (95% CI) [1]`: univariable estimate
+#'   - `P value [1]`: univariable p-value
+#'   - `OR (95% CI) [2]` or `Beta (95% CI) [2]`: multivariable estimate
+#'   - `P value [2]`: multivariable p-value
+#'
+#'   Passing the result to [format_flextable()] renders `[1]` and `[2]` as
+#'   superscript markers and adds English model footnotes below the table.
 #'
 #' @examples
 #' # Linear regression
@@ -359,10 +362,20 @@ run_glm_auto <- function(data, vars, outcome_var, covars = NULL, family = "binom
     }
   })
 
-  dplyr::bind_rows(result_list) |>
-    stats::setNames(c("Variable",
-               paste0(metric_name, "(95%CI)_单因素"), "Pvalue_单因素",
-               paste0(metric_name, "(95%CI)_多因素"), "Pvalue_多因素"))
+  result <- dplyr::bind_rows(result_list) |>
+    stats::setNames(c(
+      "Variable",
+      paste0(metric_name, " (95% CI) [1]"),
+      "P value [1]",
+      paste0(metric_name, " (95% CI) [2]"),
+      "P value [2]"
+    ))
+
+  attr(result, "medstats_regression_footnotes") <- c(
+    `1` = "Univariable analysis.",
+    `2` = "Multivariable analysis."
+  )
+  result
 }
 
 
@@ -382,10 +395,13 @@ run_glm_auto <- function(data, vars, outcome_var, covars = NULL, family = "binom
 #'
 #' @return A data frame with columns:
 #'   - `Variable`: variable name and factor levels
-#'   - `HR(95%CI)_单因素`: univariate HR (95% CI)
-#'   - `Pvalue_单因素`: univariate p-value
-#'   - `HR(95%CI)_多因素`: multivariate HR (95% CI)
-#'   - `Pvalue_多因素`: multivariate p-value
+#'   - `HR (95% CI) [1]`: univariable HR (95% CI)
+#'   - `P value [1]`: univariable p-value
+#'   - `HR (95% CI) [2]`: multivariable HR (95% CI)
+#'   - `P value [2]`: multivariable p-value
+#'
+#'   Passing the result to [format_flextable()] renders `[1]` and `[2]` as
+#'   superscript markers and adds English model footnotes below the table.
 #'
 #' @examples
 #' \dontrun{
@@ -450,7 +466,18 @@ run_cox_auto <- function(data, vars, time_var, event_var, covars = NULL) {
     }
   })
 
-  dplyr::bind_rows(result_list) |>
-    stats::setNames(c("Variable", "HR(95%CI)_单因素", "Pvalue_单因素",
-                       "HR(95%CI)_多因素", "Pvalue_多因素"))
+  result <- dplyr::bind_rows(result_list) |>
+    stats::setNames(c(
+      "Variable",
+      "HR (95% CI) [1]",
+      "P value [1]",
+      "HR (95% CI) [2]",
+      "P value [2]"
+    ))
+
+  attr(result, "medstats_regression_footnotes") <- c(
+    `1` = "Univariable analysis.",
+    `2` = "Multivariable analysis."
+  )
+  result
 }

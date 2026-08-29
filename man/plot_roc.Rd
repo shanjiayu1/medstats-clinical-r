@@ -8,9 +8,11 @@ plot_roc(
   data,
   true_var,
   pred_var,
-  title = "ROC 曲线",
+  title = "ROC curve",
   line_color = "#2E86AB",
-  show_print = TRUE
+  show_print = TRUE,
+  xlab = "1 - Specificity (False Positive Rate)",
+  ylab = "Sensitivity (True Positive Rate)"
 )
 }
 \arguments{
@@ -20,11 +22,17 @@ plot_roc(
 
 \item{pred_var}{Character string. Name of the predicted probability variable.}
 
-\item{title}{Character string. Plot title. Default is \code{"ROC 曲线"}.}
+\item{title}{Character string. Plot title. Default is \code{"ROC curve"}.}
 
 \item{line_color}{Character string. ROC curve color. Default is \code{"#2E86AB"}.}
 
 \item{show_print}{Logical. Whether to print statistics to console. Default is \code{TRUE}.}
+
+\item{xlab}{Character string. X-axis label. Default is
+\code{"1 - Specificity (False Positive Rate)"}.}
+
+\item{ylab}{Character string. Y-axis label. Default is
+\code{"Sensitivity (True Positive Rate)"}.}
 }
 \value{
 Invisibly returns a list with:

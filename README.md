@@ -1,5 +1,7 @@
 # medstats
 
+English | [简体中文](README.zh-CN.md)
+
 **medstats** is an R package that streamlines common workflows in
 medical and epidemiological research. It provides tools for clinical data
 processing, statistical modeling, publication-ready tables, and
@@ -75,15 +77,16 @@ ft_summary <- format_flextable(tbl)
 ### Export tables and plots to Word
 
 ```r
-export_word(table1, table2, "two_tables.docx")
+# Detailed approach: specify data and titles separately with full customization
+table1=head(mtcars)
 
-p <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) +
+p1 <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) +
   ggplot2::geom_point()
 
 export_word(
   data_list = list(
-    head(mtcars),
-    p
+    table1,
+    p1
   ),
   table_titles = c(
     "Table 1. mtcars dataset",
@@ -93,6 +96,8 @@ export_word(
   figure_width = 6,
   figure_height = 5
 )
+# Simplified approach: pass objects directly (titles auto-generated from object names)
+export_word(table1, p1, "tables_and_plots.docx")
 ```
 
 When objects are passed directly or `table_titles` is omitted, titles are
@@ -104,8 +109,17 @@ Plots and existing PNG files can be mixed with tables. Plots are rendered on a
 For PNG files, omit `word_height` to preserve the original aspect ratio:
 
 ```r
+p1 <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) +
+  ggplot2::geom_point()
+ggplot2::ggsave(
+  filename = "p1.png",
+  plot = p1,
+  width = 7,
+  height = 7,
+  dpi = 300
+)
 export_word(
-  data_list = list(table1, "ADL_plot.png"),
+  data_list = list(table1, "p1.png"),
   table_titles = c("Table 1", "Figure 1"),
   output_file = "results.docx",
   word_width = 6.2
@@ -197,7 +211,10 @@ gee_results <- longdata_analysis(
 )
 
 print(gee_results)
+format_flextable(gee_results)
 ```
+
+![1787995086307](image/README/1787995086307.png)
 
 The input must be in long format, with one row per subject and measurement
 time. The time variable must contain an extractable numeric component.
@@ -224,7 +241,13 @@ logistic_results <- run_glm_auto(
   outcome_var = "response",
   family = "binomial"
 )
+
+format_flextable(logistic_results)
 ```
+
+Formatted regression tables use superscript model markers in the headers and
+English footnotes below the table: `1 Univariable analysis.` and
+`2 Multivariable analysis.`
 
 ### Automated Cox regression
 
@@ -243,7 +266,10 @@ cox_results <- run_cox_auto(
   time_var = "time",
   event_var = "status_event"
 )
+format_flextable(cox_results)
 ```
+
+![1787995016520](image/README/1787995016520.png)
 
 ## Data visualization
 
@@ -314,7 +340,7 @@ When a grouping column is supplied, percentages are calculated within each
 time-by-group combination and the group stacks are drawn side by side.
 Use `label_size` to adjust the percentage-label font size inside the bars.
 
-![Stacked percentage bar plot](image/README/1785225958301.png)
+![1787983129815](image/README/1787983129815.png)
 
 ### Kaplan–Meier cumulative event curve
 
@@ -343,7 +369,7 @@ plot_km(
 )
 ```
 
-![Kaplan-Meier curve](image/README/1785226634242.png)
+![1787983164950](image/README/1787983164950.png)
 
 ### Sankey plot
 
@@ -378,7 +404,7 @@ sankey_plot <- plot_sankey(
 sankey_plot
 ```
 
-![Sankey plot](image/README/1785229734133.png)
+![1787982962290](image/README/1787982962290.png)
 
 ### Forest plot
 
@@ -402,7 +428,7 @@ plot_forest(
 )
 ```
 
-![Forest plot](image/README/1785228928911.png)
+![1787983212108](image/README/1787983212108.png)
 
 ### Restricted cubic spline plot
 
@@ -426,6 +452,7 @@ rcs_linear$plot
 Cox model:
 
 ```r
+library(survival)
 lung_rcs <- survival::lung
 lung_rcs$status_event <- as.integer(lung_rcs$status == 2)
 
@@ -441,7 +468,7 @@ rcs_cox <- plot_rcs(
 rcs_cox$plot
 ```
 
-![Restricted cubic spline plot](image/README/1785227052210.png)
+![1787983418170](image/README/1787983418170.png)
 
 ### ROC curve
 
@@ -470,4 +497,4 @@ roc_result <- plot_roc(
 roc_result$plot
 ```
 
-![ROC curve](image/README/1785227090046.png)
+![1787993564863](image/README/1787993564863.png)

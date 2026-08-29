@@ -130,8 +130,29 @@ plot_stacked(
   breaks = c(-Inf, 100, 200, 300, Inf),
   labels = c("≤100 g", "101–200 g", "201–300 g", ">300 g"),
   colors = c("#B5D1E8", "#A3D9A5", "#F2C68F", "#EB938F"),
-  legend_title = "Weight range"
+  legend_title = "Weight range",
+  xlab="fol"
 )
+
+
+stacked_data <- datasets::ChickWeight
+stacked_data$Time <- factor(
+  stacked_data$Time,
+  levels = sort(unique(stacked_data$Time))
+)
+
+stacked_result <- plot_stacked(
+  data = stacked_data,
+  target_var = "weight",
+  time_var = "Time",
+  group_var = "Diet",
+  breaks = c(-Inf, 100, 200, 300, Inf),
+  labels = c("≤100 g", "101–200 g", "201–300 g", ">300 g"),
+  colors = c("#B5D1E8", "#A3D9A5", "#F2C68F", "#EB938F"),
+  legend_title = "Weight range",
+  label_size = 4.5
+)
+
 
 remotes::install_github("nx10/httpgd")
 library(httpgd)
@@ -330,3 +351,276 @@ data_clean
 
 # 检查每个 record_id 是否只保留一条记录
 anyDuplicated(data_clean$record_id)
+
+
+sankey_data <- datasets::ChickWeight |>
+  dplyr::filter(Time %in% c(0, 10, 20)) |>
+  dplyr::mutate(
+    visit = factor(
+      paste0("Day ", Time),
+      levels = c("Day 0", "Day 10", "Day 20")
+    ),
+    weight_status = dplyr::case_when(
+      weight < 50 ~ "Light",
+      weight < 150 ~ "Normal",
+      TRUE ~ "Heavy"
+    ),
+    weight_status = factor(
+      weight_status,
+      levels = c("Light", "Normal", "Heavy")
+    )
+  )
+
+sankey_plot <- plot_sankey(
+  data = sankey_data,
+  id_var = "Chick",
+  time_var = "visit",
+  state_var = "weight_status",
+  na_strategy = "show",
+  missing_label = "Drop-out",
+  legend_label = "Status",
+  xlab="Follow time",
+  ylab="Count"
+)
+
+sankey_plot
+
+ggsave(sankey_plot,
+file="sankey_plot.png")
+
+
+
+stacked_data <- datasets::ChickWeight
+stacked_data$Time <- factor(
+  stacked_data$Time,
+  levels = sort(unique(stacked_data$Time))
+)
+
+stacked_result <- plot_stacked(
+  data = stacked_data,
+  target_var = "weight",
+  time_var = "Time",
+  # group_var = "Diet",
+  breaks = c(-Inf, 100, 200, 300, Inf),
+  labels = c("≤100 g", "101–200 g", "201–300 g", ">300 g"),
+  colors = c("#B5D1E8", "#A3D9A5", "#F2C68F", "#EB938F"),
+  legend_title = "Weight range",
+  label_size = 4.5,
+  xlab="Follow time",
+  ylab="Percent(%)"
+)
+
+stacked_result
+
+ggsave(stacked_result$plot,
+file="stacked_result.png")
+
+
+
+
+lung_data <- survival::lung
+lung_data$status_event <- as.integer(lung_data$status == 2)
+lung_data$sex <- factor(
+  lung_data$sex,
+  levels = c(1, 2),
+  labels = c("Male", "Female")
+)
+
+plot_km(
+  data = lung_data,
+  group_var = "sex",
+  time_var = "time",
+  status_var = "status_event",
+  legend_labs = c("Male", "Female"),
+  legend_title = "Sex",
+  xlab = "Follow-up time (days)",
+  ylab = "Cumulative mortality (%)",
+  xlim = c(0, 1000),
+  break_time = 200,
+  show_risk_table = TRUE,
+  save_filename = "Lung_KM.png"
+)
+
+
+forest_data <- data.frame(
+  Variable = c("Age", "Stage II", "Stage III"),
+  `OR (95% CI)` = c(
+    "1.02 (0.99, 1.05)",
+    "1.45 (0.82, 2.56)",
+    "2.10 (1.12, 3.94)"
+  ),
+  `P value` = c("0.180", "0.200", "0.021"),
+  check.names = FALSE
+)
+
+plot_forest(
+  data = forest_data,
+  ci_column = "OR (95% CI)",
+  x_ticks = c(0, 0.5, 1, 2, 4),
+  output_name = "Forest_plot.png"
+)
+
+
+
+roc_model <- glm(
+  am ~ mpg + hp + wt,
+  data = mtcars,
+  family = binomial
+)
+
+roc_data <- mtcars
+roc_data$predicted_probability <- predict(
+  roc_model,
+  newdata = roc_data,
+  type = "response"
+)
+
+roc_result <- plot_roc(
+  data = roc_data,
+  true_var = "am",
+  pred_var = "predicted_probability",
+  title = "Training ROC curve",
+  line_color = "#2E86AB",
+    xlab = "Follow-up time (days)",
+  ylab = "Cumulative mortality (%)",
+)
+
+roc_result$plot
+
+library(survival)
+lung_rcs <- survival::lung
+lung_rcs$status_event <- as.integer(lung_rcs$status == 2)
+
+rcs_cox <- plot_rcs(
+  data = lung_rcs,
+  exposure = "age",
+  outcome = "Surv(time, status_event)",
+  covars = c("sex", "ph.ecog"),
+  model_type = "cox",
+  ylab = "Hazard ratio"
+)
+
+rcs_cox$plot
+
+ggsave(rcs_cox$plot,
+file="rcs_cox.png")
+
+
+rcs_linear <- plot_rcs(
+  data = mtcars,
+  exposure = "wt",
+  outcome = "mpg",
+  covars = c("hp", "disp"),
+  nk = 4,
+  model_type = "linear",
+  xlab = "Weight",
+  ylab = "Predicted MPG"
+)
+
+rcs_linear$plot
+
+ggsave(rcs_cox$plot,
+file="rcs_cox.png")
+
+
+roc_model <- glm(
+  am ~ mpg + hp + wt,
+  data = mtcars,
+  family = binomial
+)
+
+roc_data <- mtcars
+roc_data$predicted_probability <- predict(
+  roc_model,
+  newdata = roc_data,
+  type = "response"
+)
+
+roc_result <- plot_roc(
+  data = roc_data,
+  true_var = "am",
+  pred_var = "predicted_probability",
+  title = "Training ROC curve",
+  line_color = "#2E86AB"
+)
+ggsave(roc_result$plot,
+file="roc_result.png")
+
+roc_result$plot
+
+library(ResourceSelection)
+install.packages("ResourceSelection")
+
+library(medstats)
+roc_result <- plot_roc(
+  data = roc_data,
+  true_var = "am",
+  pred_var = "predicted_probability",
+  title = "Training ROC curve",
+  line_color = "#2E86AB",
+  xlab = "1 - Specificity",
+  ylab = "Sensitivity"
+)
+roc_result
+
+
+ft_data <- format_flextable(
+  head(mtcars[, 1:5])
+)
+
+# Format a gtsummary object
+tbl <- gtsummary::tbl_summary(
+  data = gtsummary::trial,
+  include = c(age, marker, grade),
+  by = trt
+)
+
+format_flextable(tbl)
+
+
+lung_data <- survival::lung
+lung_data$status_event <- as.integer(lung_data$status == 2)
+lung_data$sex <- factor(
+  lung_data$sex,
+  levels = c(1, 2),
+  labels = c("Male", "Female")
+)
+
+cox_results <- run_cox_auto(
+  data = lung_data,
+  vars = c("age", "sex"),
+  time_var = "time",
+  event_var = "status_event"
+)
+format_flextable(cox_results)
+
+
+
+linear_results <- run_glm_auto(
+  data = mtcars,
+  vars = c("hp", "wt"),
+  outcome_var = "mpg",
+  family = "gaussian"
+)
+
+linear_results
+
+
+data("Orthodont", package = "nlme")
+
+orthodont_data <- Orthodont |>
+  as.data.frame() |>
+  dplyr::mutate(
+    time_str = paste0(age, " years")
+  )
+
+gee_results <- longdata_analysis(
+  data = orthodont_data,
+  id_col = "Subject",
+  treatment_col = "Sex",
+  time_col = "time_str",
+  score_col = "distance"
+)
+
+print(gee_results)
+format_flextable(gee_results)

@@ -102,16 +102,34 @@ make_table1(
 
 ```{r eval=FALSE}
 # Linear regression
-run_glm_auto(mtcars, vars = c("hp", "wt"), outcome_var = "mpg", family = "gaussian")
+linear_results <- run_glm_auto(
+  mtcars,
+  vars = c("hp", "wt"),
+  outcome_var = "mpg",
+  family = "gaussian"
+)
+format_flextable(linear_results)
 
 # Logistic regression
-run_glm_auto(trial, vars = c("age", "stage"), outcome_var = "response", family = "binomial")
+logistic_results <- run_glm_auto(
+  trial,
+  vars = c("age", "stage"),
+  outcome_var = "response",
+  family = "binomial"
+)
+format_flextable(logistic_results)
 ```
 
 ## Automated Cox regression
 
 ```{r eval=FALSE}
-run_cox_auto(lung, vars = c("age", "sex"), time_var = "time", event_var = "status")
+cox_results <- run_cox_auto(
+  lung,
+  vars = c("age", "sex"),
+  time_var = "time",
+  event_var = "status"
+)
+format_flextable(cox_results)
 ```
 
 # Plotting

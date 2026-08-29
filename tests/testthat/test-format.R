@@ -19,6 +19,32 @@ test_that("format_flextable works with gtsummary input", {
   expect_s3_class(ft, "flextable")
 })
 
+test_that("format_flextable adds regression superscripts and footnotes", {
+  result <- run_glm_auto(
+    data = mtcars,
+    vars = "hp",
+    outcome_var = "mpg",
+    covars = "wt",
+    family = "gaussian"
+  )
+
+  ft <- format_flextable(result)
+  estimate_header <- ft$header$content$data[
+    1,
+    "Beta (95% CI) [1]"
+  ][[1]]
+  first_footer <- ft$footer$content$data[1, "Variable"][[1]]
+  second_footer <- ft$footer$content$data[2, "Variable"][[1]]
+
+  expect_equal(estimate_header$txt, c("Beta (95% CI)", "1"))
+  expect_equal(estimate_header$vertical.align[2], "superscript")
+  expect_equal(first_footer$txt, c("1", " Univariable analysis."))
+  expect_equal(first_footer$vertical.align[1], "superscript")
+  expect_equal(second_footer$txt, c("2", " Multivariable analysis."))
+  expect_equal(second_footer$vertical.align[1], "superscript")
+  expect_equal(ft$footer$styles$pars$text.align$data[, 1], c("left", "left"))
+})
+
 test_that("export_word validates inputs", {
   expect_error(export_word("not_a_list", c("t1")), "list")
   expect_error(export_word(list(head(mtcars), head(iris)), c("only_one")), "do not match")

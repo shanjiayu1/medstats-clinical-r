@@ -16,6 +16,8 @@ centered alignment, and auto-fitted column widths.
 \description{
 Applies a unified formatting scheme to a flextable, gtsummary, or data.frame object,
 producing a clean three-line table (三线表) suitable for academic publications.
+Regression results returned by \code{\link[=run_glm_auto]{run_glm_auto()}} and \code{\link[=run_cox_auto]{run_cox_auto()}} receive
+superscript model markers in their headers and English footnotes below the table.
 }
 \examples{
 # Format a data.frame
