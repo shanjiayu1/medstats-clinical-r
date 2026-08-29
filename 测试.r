@@ -624,3 +624,21 @@ gee_results <- longdata_analysis(
 
 print(gee_results)
 format_flextable(gee_results)
+
+
+growth_data <- datasets::ChickWeight |>
+  dplyr::filter(Time %in% c(0, 4, 10, 14, 21)) |>
+  dplyr::mutate(
+    time_label = paste0("Day ", Time),
+    diet_label = paste0("Diet ", Diet)
+  )
+
+meanse_result <- plot_meanse(
+  data = growth_data,
+  target_var = "weight",
+  time_var = "time_label",
+  group_var = "diet_label",
+  xlab = "Growth time (days)",
+  ylab = "Mean weight (g)",
+  legend_title = "Diet"
+)

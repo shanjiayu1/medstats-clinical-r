@@ -44,7 +44,7 @@ use \code{"t"} for Welch's two-sample t-test or \code{"wilcox"} for the Wilcoxon
 test at each time point. Significant results are marked with stars. Default is \code{NULL}.}
 }
 \value{
-A list with:
+Invisibly returns a list with:
 \itemize{
 \item \code{summary_data}: data frame of computed means, SDs, SEs
 \item \code{test_data}: time-specific test results, or \code{NULL} when no test is requested

@@ -3,16 +3,25 @@ test_that("plot_meanse returns list with plot and data", {
     dplyr::filter(Time %in% c(0, 10, 20)) |>
     dplyr::mutate(time_str = paste0("第", Time, "天"))
 
-  result <- plot_meanse(
-    data = test_data,
-    target_var = "weight",
-    time_var = "time_str",
-    group_var = NULL
+  visible_result <- withVisible(
+    plot_meanse(
+      data = test_data,
+      target_var = "weight",
+      time_var = "time_str",
+      group_var = NULL
+    )
   )
+  expect_false(visible_result$visible)
+  result <- visible_result$value
   expect_type(result, "list")
   expect_true("plot" %in% names(result))
   expect_true("summary_data" %in% names(result))
   expect_s3_class(result$plot, "ggplot")
+  expect_equal(
+    result$plot$theme$plot.margin,
+    ggplot2::margin(t = 15, r = 15, b = 15, l = 15)
+  )
+  expect_no_error(print(result$plot))
 })
 
 test_that("plot_stacked returns list with plot and data", {
@@ -20,15 +29,19 @@ test_that("plot_stacked returns list with plot and data", {
     dplyr::filter(Time %in% c(0, 10, 20)) |>
     dplyr::mutate(Time_str = factor(paste0("第", Time, "天")))
 
-  result <- plot_stacked(
-    data = test_data,
-    target_var = "weight",
-    time_var = "Time_str",
-    breaks = c(-Inf, 50, 100, 200, Inf),
-    labels = c("<=50", "51-100", "101-200", ">200"),
-    colors = c("#B5D1E8", "#A3D9A5", "#F2C68F", "#EB938F"),
-    label_size = 5.5
+  visible_result <- withVisible(
+    plot_stacked(
+      data = test_data,
+      target_var = "weight",
+      time_var = "Time_str",
+      breaks = c(-Inf, 50, 100, 200, Inf),
+      labels = c("<=50", "51-100", "101-200", ">200"),
+      colors = c("#B5D1E8", "#A3D9A5", "#F2C68F", "#EB938F"),
+      label_size = 5.5
+    )
   )
+  expect_false(visible_result$visible)
+  result <- visible_result$value
   expect_type(result, "list")
   expect_true("plot" %in% names(result))
   expect_s3_class(result$plot, "ggplot")
@@ -206,13 +219,17 @@ test_that("plot_sankey returns ggplot object", {
       )
     )
 
-  result <- plot_sankey(
-    data = test_data,
-    id_var = "Chick",
-    time_var = "Visit",
-    state_var = "Status",
-    na_strategy = "drop"
+  visible_result <- withVisible(
+    plot_sankey(
+      data = test_data,
+      id_var = "Chick",
+      time_var = "Visit",
+      state_var = "Status",
+      na_strategy = "drop"
+    )
   )
+  expect_false(visible_result$visible)
+  result <- visible_result$value
   expect_s3_class(result, "ggplot")
 })
 

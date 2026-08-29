@@ -52,7 +52,7 @@ Default is \code{"Drop-out (失访)"}.}
 \item{dpi}{Numeric. Plot resolution. Default is \code{300}.}
 }
 \value{
-A ggplot object.
+Invisibly returns a ggplot object.
 }
 \description{
 Creates a Sankey/alluvial diagram showing patient state transitions across time points,

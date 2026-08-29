@@ -54,7 +54,7 @@ calculated separately for each time-by-group combination. Default is \code{NULL}
 Default is \code{4}.}
 }
 \value{
-A list with:
+Invisibly returns a list with:
 \itemize{
 \item \code{summary_data}: data frame of computed percentages
 \item \code{plot}: the ggplot object

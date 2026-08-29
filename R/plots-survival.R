@@ -299,7 +299,7 @@ plot_km <- function(data,
 #' @param plot_height Numeric. Plot height in inches. Default is `8`.
 #' @param dpi Numeric. Plot resolution. Default is `300`.
 #'
-#' @return A ggplot object.
+#' @return Invisibly returns a ggplot object.
 #'
 #' @examples
 #' \dontrun{
@@ -409,7 +409,7 @@ plot_sankey <- function(data,
       )
 
     print(p)
-    return(p)
+    invisible(p)
 
   }, error = function(e) {
     cat("错误: 绘制桑基图时出错:", conditionMessage(e), "\n")
