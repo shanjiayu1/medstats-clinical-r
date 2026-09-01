@@ -99,7 +99,7 @@ export_word(
 # Simplified approach: pass objects directly (titles auto-generated from object names)
 export_word(table1, p1, "tables_and_plots.docx")
 ```
-
+![1788246900264](image/README/1788246900264.png)
 When objects are passed directly or `table_titles` is omitted, titles are
 generated automatically (`Table 1`, `Table 2`, `Figure 1`, ...). Table titles
 appear above tables; figure titles appear below figures.
@@ -119,8 +119,8 @@ ggplot2::ggsave(
   dpi = 300
 )
 export_word(
-  data_list = list(table1, "p1.png"),
-  table_titles = c("Table 1", "Figure 1"),
+  data_list = list(p1, "p1.png"),
+  table_titles = c("Figure 1", "Figure 1"),
   output_file = "results.docx",
   word_width = 6.2
 )
@@ -292,8 +292,11 @@ meanse_result <- plot_meanse(
   ylab = "Mean weight (g)",
   legend_title = "Diet"
 )
-```
+#保存图片
+ggsave(meanse_result$plot, file = "meanse_plot.png", width = 6, height = 5)
 
+```
+![1788247119961](image/README/1788247119961.png)
 For two-group data, set `test_method = "t"` or `test_method = "wilcox"` to
 compare the groups at every time point. Significant results are marked above
 the corresponding time point, and the p-values are returned in `test_data`.
@@ -311,7 +314,7 @@ two_diet_result <- plot_meanse(
 two_diet_result$test_data
 ```
 
-![Mean and standard error line plot](image/README/1785225730190.png)
+![1788247181647](image/README/1788247181647.png)
 
 ### Stacked percentage bar plot
 

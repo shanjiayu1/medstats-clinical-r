@@ -63,7 +63,7 @@ Default is \code{c(0.1, 0.9)}.}
 \item{base_size}{Numeric. Base font size for the theme. Default is \code{18}.}
 }
 \value{
-Invisibly returns a list with:
+Displays the plot and invisibly returns a list with:
 \itemize{
 \item \code{fit}: the fitted model object
 \item \code{anova}: ANOVA results

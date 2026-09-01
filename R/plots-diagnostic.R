@@ -26,7 +26,7 @@
 #' @param ribbon_alpha Numeric. Ribbon transparency (0-1). Default is `0.22`.
 #' @param base_size Numeric. Base font size for the theme. Default is `18`.
 #'
-#' @return Invisibly returns a list with:
+#' @return Displays the plot and invisibly returns a list with:
 #'   - `fit`: the fitted model object
 #'   - `anova`: ANOVA results
 #'   - `pred`: prediction object
@@ -193,6 +193,7 @@ plot_rcs <- function(data,
     ggplot2::annotate("text", x = Inf, y = Inf, label = anno_text,
                        hjust = 1, vjust = 1, size = base_size * 0.3)
 
+  print(p)
   invisible(list(
     fit = fit,
     anova = anova_obj,
@@ -220,7 +221,7 @@ plot_rcs <- function(data,
 #' @param ylab Character string. Y-axis label. Default is
 #'   `"Sensitivity (True Positive Rate)"`.
 #'
-#' @return Invisibly returns a list with:
+#' @return Displays the plot and invisibly returns a list with:
 #'   - `roc_obj`: the pROC roc object
 #'   - `auc`: AUC value
 #'   - `ci`: 95% CI (lower, upper)
@@ -309,6 +310,7 @@ plot_roc <- function(data,
       panel.grid.major = ggplot2::element_line(color = "gray90", linewidth = 0.3)
     )
 
+  print(p)
   invisible(list(
     roc_obj = roc_obj,
     auc = auc_val,

@@ -1,3 +1,21 @@
+capture_plot_output <- function(code) {
+  plot_file <- tempfile(fileext = ".png")
+  grDevices::png(plot_file)
+  plot_device <- grDevices::dev.cur()
+  on.exit({
+    if (plot_device %in% grDevices::dev.list()) {
+      grDevices::dev.off(plot_device)
+    }
+    unlink(plot_file)
+  }, add = TRUE)
+
+  result <- force(code)
+  grDevices::dev.off(plot_device)
+  expect_true(file.exists(plot_file))
+  expect_gt(file.info(plot_file)$size, 0)
+  result
+}
+
 test_that("plot_meanse returns list with plot and data", {
   test_data <- ChickWeight |>
     dplyr::filter(Time %in% c(0, 10, 20)) |>
@@ -121,14 +139,16 @@ test_that("plot_roc returns list with correct elements", {
   mtcars2 <- mtcars
   mtcars2$pred_prob <- predict(model, newdata = mtcars2, type = "response")
 
-  result <- plot_roc(
-    data = mtcars2,
-    true_var = "am",
-    pred_var = "pred_prob",
-    title = "Training ROC curve",
-    show_print = FALSE,
-    xlab = "1 - Specificity",
-    ylab = "Sensitivity"
+  result <- capture_plot_output(
+    plot_roc(
+      data = mtcars2,
+      true_var = "am",
+      pred_var = "pred_prob",
+      title = "Training ROC curve",
+      show_print = FALSE,
+      xlab = "1 - Specificity",
+      ylab = "Sensitivity"
+    )
   )
   expect_type(result, "list")
   expect_true("auc" %in% names(result))
@@ -143,11 +163,13 @@ test_that("plot_roc returns list with correct elements", {
   expect_match(plot_data[[3]]$label, "H-L test p =", fixed = TRUE)
   expect_false(any(grepl("检验", plot_data[[3]]$label, fixed = TRUE)))
 
-  default_result <- plot_roc(
-    data = mtcars2,
-    true_var = "am",
-    pred_var = "pred_prob",
-    show_print = FALSE
+  default_result <- capture_plot_output(
+    plot_roc(
+      data = mtcars2,
+      true_var = "am",
+      pred_var = "pred_prob",
+      show_print = FALSE
+    )
   )
   expect_equal(default_result$plot$labels$title, "ROC curve")
   expect_equal(
@@ -160,11 +182,13 @@ test_that("plot_roc returns list with correct elements", {
   )
 
   console_output <- capture.output(
-    plot_roc(
-      data = mtcars2,
-      true_var = "am",
-      pred_var = "pred_prob",
-      show_print = TRUE
+    capture_plot_output(
+      plot_roc(
+        data = mtcars2,
+        true_var = "am",
+        pred_var = "pred_prob",
+        show_print = TRUE
+      )
     )
   )
   expect_match(
@@ -176,11 +200,13 @@ test_that("plot_roc returns list with correct elements", {
 
 test_that("plot_rcs returns list with plot", {
   skip_if_not_installed("rms")
-  result <- plot_rcs(
-    data = mtcars,
-    exposure = "wt",
-    outcome = "mpg",
-    model_type = "linear"
+  result <- capture_plot_output(
+    plot_rcs(
+      data = mtcars,
+      exposure = "wt",
+      outcome = "mpg",
+      model_type = "linear"
+    )
   )
   expect_type(result, "list")
   expect_true("plot" %in% names(result))
@@ -192,13 +218,15 @@ test_that("plot_rcs resolves Surv for Cox models", {
   lung_rcs <- survival::lung
   lung_rcs$status_event <- as.integer(lung_rcs$status == 2)
 
-  result <- plot_rcs(
-    data = lung_rcs,
-    exposure = "age",
-    outcome = "Surv(time, status_event)",
-    covars = c("sex", "ph.ecog"),
-    model_type = "cox",
-    ylab = "Hazard ratio"
+  result <- capture_plot_output(
+    plot_rcs(
+      data = lung_rcs,
+      exposure = "age",
+      outcome = "Surv(time, status_event)",
+      covars = c("sex", "ph.ecog"),
+      model_type = "cox",
+      ylab = "Hazard ratio"
+    )
   )
 
   expect_type(result, "list")

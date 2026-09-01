@@ -35,7 +35,7 @@ plot_roc(
 \code{"Sensitivity (True Positive Rate)"}.}
 }
 \value{
-Invisibly returns a list with:
+Displays the plot and invisibly returns a list with:
 \itemize{
 \item \code{roc_obj}: the pROC roc object
 \item \code{auc}: AUC value

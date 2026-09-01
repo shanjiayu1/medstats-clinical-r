@@ -642,3 +642,82 @@ meanse_result <- plot_meanse(
   ylab = "Mean weight (g)",
   legend_title = "Diet"
 )
+
+
+
+library(medstats)
+# 准备表格和图片
+table1 <- head(mtcars)
+p1 <- ggplot2::ggplot(mtcars, ggplot2::aes(wt, mpg)) +
+  ggplot2::geom_point()
+ 
+# 详细方式：自定义标题
+export_word(
+  data_list = list(table1, p1),
+  table_titles = c(
+    "Table 1. mtcars dataset",
+    "Figure 1. MPG and weight"
+  ),
+  output_file = "tables_and_plots.docx",
+  figure_width = 6,
+  figure_height = 5
+)
+ 
+# 简化方式：直接传入对象，标题自动生成
+export_word(table1, p1, "tables_and_plots.docx")
+
+
+
+growth_data <- datasets::ChickWeight |>
+  dplyr::filter(Time %in% c(0, 4, 10, 14, 21)) |>
+  dplyr::mutate(
+    time_label = paste0("Day ", Time),
+    diet_label = paste0("Diet ", Diet)
+  )
+
+meanse_result <- plot_meanse(
+  data = growth_data,
+  target_var = "weight",
+  time_var = "time_label",
+  group_var = "diet_label",
+  xlab = "Growth time (days)",
+  ylab = "Mean weight (g)",
+  legend_title = "Diet"
+)
+
+meanse_result
+
+ggsave(meanse_result$plot, file = "meanse_plot.png", width = 6, height = 5)
+
+
+
+
+
+library(survival)
+
+lung_rcs <- survival::lung
+lung_rcs$status_event <- as.integer(lung_rcs$status == 2)
+
+rcs_cox <- plot_rcs(
+  data = lung_rcs,
+  exposure = "age",
+  outcome = "Surv(time, status_event)",
+  covars = c("sex", "ph.ecog"),
+  model_type = "cox",
+  ylab = "Hazard ratio"
+)
+
+
+
+two_diet_result <- plot_meanse(
+  data = dplyr::filter(growth_data, diet_label %in% c("Diet 1", "Diet 2")),
+  target_var = "weight",
+  time_var = "time_label",
+  group_var = "diet_label",
+  test_method = "wilcox",
+  legend_title = "Diet",
+  xlab="Growth time (days)",
+  ylab="Mean weight (g)"
+)
+ggsave(two_diet_result$plot, file = "two_diet_plot.png", width = 6, height = 5)
+two_diet_result$test_data
