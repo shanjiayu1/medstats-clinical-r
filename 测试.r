@@ -270,7 +270,7 @@ res_train <- plot_roc(
 )
 res_train$plot
 
-
+library(medstats)
 
 
 my_test_data <- ChickWeight %>%

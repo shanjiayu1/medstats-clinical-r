@@ -12,6 +12,7 @@ plot_forest(
   output_name = "TCM_Forestplot.png",
   width = 7.5,
   xlab = "Odds Ratio (95\% CI)",
+  graph_ratio = NULL,
   boxsize = 0.25,
   col_box = "#1f77b4"
 )
@@ -32,6 +33,10 @@ plot_forest(
 \item{width}{Numeric. Plot width in inches. Default is \code{7.5}.}
 
 \item{xlab}{Character string. X-axis label. Default is \code{"Odds Ratio (95\% CI)"}.}
+
+\item{graph_ratio}{Numeric or \code{NULL}. Proportion of the available plot width used by
+the forest graph. Must be strictly between 0 and 1. If \code{NULL} (default), the width
+is determined automatically by \code{forestplot}.}
 
 \item{boxsize}{Numeric. Size of the forest plot squares. Default is \code{0.25}.}
 

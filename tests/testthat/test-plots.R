@@ -198,6 +198,44 @@ test_that("plot_roc returns list with correct elements", {
   )
 })
 
+test_that("plot_forest supports proportional graph width", {
+  skip_if_not_installed("forestplot")
+
+  test_data <- data.frame(
+    Variable = c("Age", "Stage II"),
+    `OR (95% CI)` = c("1.02 (0.99, 1.05)", "1.45 (0.82, 2.56)"),
+    check.names = FALSE
+  )
+  output_file <- tempfile(fileext = ".png")
+  on.exit(unlink(output_file), add = TRUE)
+
+  expect_no_error(
+    plot_forest(
+      data = test_data,
+      graph_ratio = 0.4,
+      output_name = output_file
+    )
+  )
+  expect_true(file.exists(output_file))
+  expect_gt(file.info(output_file)$size, 0)
+
+  expect_error(
+    plot_forest(test_data, graph_ratio = 0),
+    "strictly between 0 and 1",
+    fixed = TRUE
+  )
+  expect_error(
+    plot_forest(test_data, graph_ratio = 1),
+    "strictly between 0 and 1",
+    fixed = TRUE
+  )
+  expect_error(
+    plot_forest(test_data, graph_ratio = c(0.3, 0.4)),
+    "strictly between 0 and 1",
+    fixed = TRUE
+  )
+})
+
 test_that("plot_rcs returns list with plot", {
   skip_if_not_installed("rms")
   result <- capture_plot_output(

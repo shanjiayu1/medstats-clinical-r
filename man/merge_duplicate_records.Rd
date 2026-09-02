@@ -39,4 +39,5 @@ clinical_data <- data.frame(
 )
 
 merge_duplicate_records(clinical_data, group_vars = "hospital_id")
+
 }

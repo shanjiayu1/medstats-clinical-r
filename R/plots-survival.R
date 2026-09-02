@@ -15,6 +15,9 @@
 #' @param output_name Character string. Output PNG filename. Default is `"TCM_Forestplot.png"`.
 #' @param width Numeric. Plot width in inches. Default is `7.5`.
 #' @param xlab Character string. X-axis label. Default is `"Odds Ratio (95% CI)"`.
+#' @param graph_ratio Numeric or `NULL`. Proportion of the available plot width used by
+#'   the forest graph. Must be strictly between 0 and 1. If `NULL` (default), the width
+#'   is determined automatically by `forestplot`.
 #' @param boxsize Numeric. Size of the forest plot squares. Default is `0.25`.
 #' @param col_box Character string. Color for boxes and lines. Default is `"#1f77b4"`.
 #'
@@ -40,11 +43,26 @@ plot_forest <- function(data,
                         output_name = "TCM_Forestplot.png",
                         width = 7.5,
                         xlab = "Odds Ratio (95% CI)",
+                        graph_ratio = NULL,
                         boxsize = 0.25,
                         col_box = "#1f77b4") {
 
   if (is.character(ci_column) && !(ci_column %in% colnames(data))) {
     stop(paste("列名", ci_column, "不存在于数据中！请检查。"))
+  }
+
+  if (!is.null(graph_ratio) &&
+      (!is.numeric(graph_ratio) || length(graph_ratio) != 1L ||
+       is.na(graph_ratio) || !is.finite(graph_ratio) ||
+       graph_ratio <= 0 || graph_ratio >= 1)) {
+    stop("`graph_ratio` must be a single number strictly between 0 and 1.",
+         call. = FALSE)
+  }
+
+  graph_width <- if (is.null(graph_ratio)) {
+    "auto"
+  } else {
+    grid::unit(graph_ratio, "npc")
   }
 
   actual_ci_name <- ifelse(is.numeric(ci_column), colnames(data)[ci_column], ci_column)
@@ -119,7 +137,7 @@ plot_forest <- function(data,
     lty.zero   = 2,
     boxsize    = boxsize,
     graph.pos  = ncol_text + 1,
-    graphwidth = "auto",
+    graphwidth = graph_width,
     mar        = grid::unit(c(0, 2, 3, 2), "mm"),
     xlab       = xlab,
     xticks     = x_ticks,
