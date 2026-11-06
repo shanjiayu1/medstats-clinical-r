@@ -183,6 +183,9 @@ merge_duplicate_records <- function(data, group_vars, verbose = TRUE) {
 #'   non-normally distributed (reported as median + IQR). Default is `NULL`.
 #' @param group_var Character string or NULL. Name of the grouping variable for comparisons.
 #'   If `NULL`, no group comparison or p-values are shown. Default is `NULL`.
+#' @param type Optional formula list passed to `gtsummary::tbl_summary()`
+#'   to override variable types, for example `list(dose ~ "continuous")`.
+#'   When `NULL`, variable types are inferred.
 #'
 #' @return A `gtsummary` table object.
 #'
@@ -208,7 +211,8 @@ merge_duplicate_records <- function(data, group_vars, verbose = TRUE) {
 make_table1 <- function(data,
                         vars,
                         specific_vars = NULL,
-                        group_var = NULL) {
+                        group_var = NULL,
+                        type = NULL) {
 
   stat_list <- list(
     gtsummary::all_continuous() ~ "{mean}({sd})",
@@ -224,6 +228,7 @@ make_table1 <- function(data,
       include = gtsummary::all_of(vars),
       by = if (!is.null(group_var)) gtsummary::all_of(group_var) else NULL,
       missing = "no",
+      type = type,
       statistic = stat_list,
       digits = list(
         gtsummary::all_continuous() ~ 2,

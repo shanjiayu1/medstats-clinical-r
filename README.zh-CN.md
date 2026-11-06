@@ -182,6 +182,8 @@ table1 <- make_table1(
 table1
 ```
 
+用 `type` 显式指定变量类型，例如 `type = list(marker ~ "continuous")`.
+
 ![基线特征表示例](image/README/1785225766077.png)
 
 ## 统计建模

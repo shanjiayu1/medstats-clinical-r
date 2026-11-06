@@ -4,7 +4,7 @@
 \alias{make_table1}
 \title{Create a baseline characteristics table (Table 1)}
 \usage{
-make_table1(data, vars, specific_vars = NULL, group_var = NULL)
+make_table1(data, vars, specific_vars = NULL, group_var = NULL, type = NULL)
 }
 \arguments{
 \item{data}{A data frame.}
@@ -16,6 +16,10 @@ non-normally distributed (reported as median + IQR). Default is \code{NULL}.}
 
 \item{group_var}{Character string or NULL. Name of the grouping variable for comparisons.
 If \code{NULL}, no group comparison or p-values are shown. Default is \code{NULL}.}
+
+\item{type}{Optional formula list passed to \code{gtsummary::tbl_summary()}
+to override variable types, for example \code{list(dose ~ "continuous")}.
+When \code{NULL}, variable types are inferred.}
 }
 \value{
 A \code{gtsummary} table object.

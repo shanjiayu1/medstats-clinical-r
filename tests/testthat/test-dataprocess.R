@@ -117,3 +117,18 @@ test_that("make_table1 handles a non-normal variable", {
   expect_s3_class(result, "gtsummary")
   expect_true("statistic" %in% names(result$table_body))
 })
+
+test_that("make_table1 can override inferred numeric variable types", {
+  data <- data.frame(dose = rep(c(0, 5, 10), each = 4))
+
+  default <- make_table1(data, vars = "dose")
+  explicit <- make_table1(
+    data,
+    vars = "dose",
+    type = list(dose ~ "continuous")
+  )
+
+  expect_identical(unique(default$table_body$var_type), "categorical")
+  expect_identical(explicit$table_body$var_type, "continuous")
+  expect_identical(explicit$table_body$stat_0, "5.00(4.26)")
+})
