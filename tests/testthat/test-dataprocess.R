@@ -161,3 +161,17 @@ test_that("specific_vars selects median and quartiles with the default formats",
     c("6.50 \u00B1 3.61", "6.50 (3.50, 9.50)", "6 (50.00%)", "6 (50.00%)")
   )
 })
+
+test_that("make_table1 can produce grouped descriptive summaries only", {
+  data <- data.frame(period = rep(c("Baseline", "Cycle 1"), each = 3),
+                     score = c(1, 2, 3, 2, 4, NA))
+  result <- make_table1(
+    data, vars = "score", group_var = "period",
+    type = list(score ~ "continuous"),
+    statistic = list(score ~ "{mean}"), add_p = FALSE, add_overall = FALSE
+  )
+
+  expect_identical(result$table_body$stat_1, "2.00")
+  expect_identical(result$table_body$stat_2, "3.00")
+  expect_false(any(c("stat_0", "p.value") %in% names(result$table_body)))
+})

@@ -505,3 +505,6 @@ roc_result$plot
 ```
 
 ![1787993564863](image/README/1787993564863.png)
+
+For grouped descriptive tables, set `add_p = FALSE` and `add_overall = FALSE`
+to show only the group summaries.

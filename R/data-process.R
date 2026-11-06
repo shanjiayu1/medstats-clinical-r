@@ -192,6 +192,8 @@ merge_duplicate_records <- function(data, group_vars, verbose = TRUE) {
 #'   example `list(gtsummary::all_categorical() ~ c(0, 1))`.
 #' @param label Optional formula list of display labels, for example
 #'   `list(age ~ "Age (years)")`.
+#' @param add_p Whether to add group comparisons when `group_var` is set.
+#' @param add_overall Whether to add an overall column when `group_var` is set.
 #'
 #' @return A `gtsummary` table object.
 #'
@@ -221,7 +223,9 @@ make_table1 <- function(data,
                         type = NULL,
                         statistic = NULL,
                         digits = NULL,
-                        label = NULL) {
+                        label = NULL,
+                        add_p = TRUE,
+                        add_overall = TRUE) {
 
   if (is.null(statistic)) {
     statistic <- list(
@@ -255,9 +259,12 @@ make_table1 <- function(data,
       label = label
     )
 
-  if (!is.null(group_var)) {
+  if (!is.null(group_var) && add_overall) {
+    t <- gtsummary::add_overall(t)
+  }
+
+  if (!is.null(group_var) && add_p) {
     t <- t |>
-      gtsummary::add_overall() |>
       gtsummary::add_p(
         test = list(
           gtsummary::all_continuous() ~ "t.test",

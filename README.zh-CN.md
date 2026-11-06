@@ -501,3 +501,5 @@ roc_result$plot
 ```
 
 ![ROC 曲线](image/README/1787993564863.png)
+
+仅需分组描述时，设 `add_p = FALSE` 和 `add_overall = FALSE`，保留各组汇总。

@@ -12,7 +12,9 @@ make_table1(
   type = NULL,
   statistic = NULL,
   digits = NULL,
-  label = NULL
+  label = NULL,
+  add_p = TRUE,
+  add_overall = TRUE
 )
 }
 \arguments{
@@ -38,6 +40,10 @@ example \code{list(gtsummary::all_categorical() ~ c(0, 1))}.}
 
 \item{label}{Optional formula list of display labels, for example
 \code{list(age ~ "Age (years)")}.}
+
+\item{add_p}{Whether to add group comparisons when \code{group_var} is set.}
+
+\item{add_overall}{Whether to add an overall column when \code{group_var} is set.}
 }
 \value{
 A \code{gtsummary} table object.
