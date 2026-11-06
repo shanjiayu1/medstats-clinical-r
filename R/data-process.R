@@ -196,7 +196,7 @@ merge_duplicate_records <- function(data, group_vars, verbose = TRUE) {
 #' @return A `gtsummary` table object.
 #'
 #' @details
-#' - Normally distributed continuous variables: mean (SD)
+#' - Continuous variables by default: mean plus or minus SD
 #' - Non-normally distributed continuous variables (specified via `specific_vars`): median (P25, P75)
 #' - Categorical variables: n (p%)
 #' - When `group_var` is provided, p-values are computed using t-test for normal
@@ -225,14 +225,14 @@ make_table1 <- function(data,
 
   if (is.null(statistic)) {
     statistic <- list(
-      gtsummary::all_continuous() ~ "{mean}({sd})",
-      gtsummary::all_categorical() ~ "{n}({p}%)"
+      gtsummary::all_continuous() ~ "{mean} \u00B1 {sd}",
+      gtsummary::all_categorical() ~ "{n} ({p}%)"
     )
 
     if (length(specific_vars) > 0) {
       statistic <- c(
         statistic,
-        list(gtsummary::all_of(specific_vars) ~ "{median}({p25},{p75})")
+        list(gtsummary::all_of(specific_vars) ~ "{median} ({p25}, {p75})")
       )
     }
   }

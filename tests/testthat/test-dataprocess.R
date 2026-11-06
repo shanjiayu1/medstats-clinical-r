@@ -130,7 +130,7 @@ test_that("make_table1 can override inferred numeric variable types", {
 
   expect_identical(unique(default$table_body$var_type), "categorical")
   expect_identical(explicit$table_body$var_type, "continuous")
-  expect_identical(explicit$table_body$stat_0, "5.00(4.26)")
+  expect_identical(explicit$table_body$stat_0, "5.00 \u00B1 4.26")
 })
 
 test_that("make_table1 accepts display formats, precision, and labels", {
@@ -150,4 +150,14 @@ test_that("make_table1 accepts display formats, precision, and labels", {
   expect_identical(result$table_body$label[1], "Dose (mg/day)")
   expect_identical(result$table_body$stat_0[c(1, 3, 4)],
                    c("5.0 \u00b1 4.3", "8 (66.7%)", "4 (33.3%)"))
+})
+
+test_that("specific_vars selects median and quartiles with the default formats", {
+  data <- data.frame(age = 1:12, duration = 1:12, status = rep(c("A", "B"), 6))
+  result <- make_table1(data, vars = names(data), specific_vars = "duration")
+
+  expect_identical(
+    stats::na.omit(result$table_body$stat_0) |> as.character(),
+    c("6.50 \u00B1 3.61", "6.50 (3.50, 9.50)", "6 (50.00%)", "6 (50.00%)")
+  )
 })

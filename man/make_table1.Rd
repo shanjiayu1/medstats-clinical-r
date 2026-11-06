@@ -49,7 +49,7 @@ with Z statistic) and optional group comparisons.
 }
 \details{
 \itemize{
-\item Normally distributed continuous variables: mean (SD)
+\item Continuous variables by default: mean plus or minus SD
 \item Non-normally distributed continuous variables (specified via \code{specific_vars}): median (P25, P75)
 \item Categorical variables: n (p\%)
 \item When \code{group_var} is provided, p-values are computed using t-test for normal

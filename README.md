@@ -183,6 +183,8 @@ table1 <- make_table1(
 table1
 ```
 
+Continuous variables use mean ± SD by default. List variables in `specific_vars` to show median (Q1, Q3).
+
 Use `statistic`, `digits`, and `label` to control summary formats, precision, and display labels. Use `type` to override automatic type inference, for example `type = list(marker ~ "continuous")`.
 
 ![Example baseline table](image/README/1785225766077.png)
