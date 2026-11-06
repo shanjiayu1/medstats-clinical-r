@@ -186,6 +186,12 @@ merge_duplicate_records <- function(data, group_vars, verbose = TRUE) {
 #' @param type Optional formula list passed to `gtsummary::tbl_summary()`
 #'   to override variable types, for example `list(dose ~ "continuous")`.
 #'   When `NULL`, variable types are inferred.
+#' @param statistic Optional formula list of summary formats. When provided,
+#'   it replaces the default formats, including the `specific_vars` format.
+#' @param digits Optional formula list specifying summary precision, for
+#'   example `list(gtsummary::all_categorical() ~ c(0, 1))`.
+#' @param label Optional formula list of display labels, for example
+#'   `list(age ~ "Age (years)")`.
 #'
 #' @return A `gtsummary` table object.
 #'
@@ -212,15 +218,30 @@ make_table1 <- function(data,
                         vars,
                         specific_vars = NULL,
                         group_var = NULL,
-                        type = NULL) {
+                        type = NULL,
+                        statistic = NULL,
+                        digits = NULL,
+                        label = NULL) {
 
-  stat_list <- list(
-    gtsummary::all_continuous() ~ "{mean}({sd})",
-    gtsummary::all_categorical() ~ "{n}({p}%)"
-  )
+  if (is.null(statistic)) {
+    statistic <- list(
+      gtsummary::all_continuous() ~ "{mean}({sd})",
+      gtsummary::all_categorical() ~ "{n}({p}%)"
+    )
 
-  if (!is.null(specific_vars) && length(specific_vars) > 0) {
-    stat_list <- c(stat_list, list(gtsummary::all_of(specific_vars) ~ "{median}({p25},{p75})"))
+    if (length(specific_vars) > 0) {
+      statistic <- c(
+        statistic,
+        list(gtsummary::all_of(specific_vars) ~ "{median}({p25},{p75})")
+      )
+    }
+  }
+
+  if (is.null(digits)) {
+    digits <- list(
+      gtsummary::all_continuous() ~ 2,
+      gtsummary::all_categorical() ~ c(0, 2)
+    )
   }
 
   t <- data |>
@@ -229,16 +250,14 @@ make_table1 <- function(data,
       by = if (!is.null(group_var)) gtsummary::all_of(group_var) else NULL,
       missing = "no",
       type = type,
-      statistic = stat_list,
-      digits = list(
-        gtsummary::all_continuous() ~ 2,
-        gtsummary::all_categorical() ~ c(0, 2)
-      )
-    ) |>
-    gtsummary::add_overall()
+      statistic = statistic,
+      digits = digits,
+      label = label
+    )
 
   if (!is.null(group_var)) {
     t <- t |>
+      gtsummary::add_overall() |>
       gtsummary::add_p(
         test = list(
           gtsummary::all_continuous() ~ "t.test",

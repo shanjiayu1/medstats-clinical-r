@@ -182,7 +182,7 @@ table1 <- make_table1(
 table1
 ```
 
-用 `type` 显式指定变量类型，例如 `type = list(marker ~ "continuous")`.
+用 `statistic`、`digits` 和 `label` 设置统计格式、小数位和展示标签。用 `type` 显式指定变量类型，例如 `type = list(marker ~ "continuous")`.
 
 ![基线特征表示例](image/README/1785225766077.png)
 

@@ -132,3 +132,22 @@ test_that("make_table1 can override inferred numeric variable types", {
   expect_identical(explicit$table_body$var_type, "continuous")
   expect_identical(explicit$table_body$stat_0, "5.00(4.26)")
 })
+
+test_that("make_table1 accepts display formats, precision, and labels", {
+  data <- data.frame(
+    dose = rep(c(0, 5, 10), each = 4),
+    status = rep(c("Yes", "No"), c(4, 8))
+  )
+  result <- make_table1(
+    data,
+    vars = c("dose", "status"),
+    type = list(dose ~ "continuous", status ~ "categorical"),
+    statistic = list(dose ~ "{mean} \u00b1 {sd}", status ~ "{n} ({p}%)"),
+    digits = list(dose ~ 1, status ~ c(0, 1)),
+    label = list(dose ~ "Dose (mg/day)")
+  )
+
+  expect_identical(result$table_body$label[1], "Dose (mg/day)")
+  expect_identical(result$table_body$stat_0[c(1, 3, 4)],
+                   c("5.0 \u00b1 4.3", "8 (66.7%)", "4 (33.3%)"))
+})

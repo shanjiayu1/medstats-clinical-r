@@ -4,7 +4,16 @@
 \alias{make_table1}
 \title{Create a baseline characteristics table (Table 1)}
 \usage{
-make_table1(data, vars, specific_vars = NULL, group_var = NULL, type = NULL)
+make_table1(
+  data,
+  vars,
+  specific_vars = NULL,
+  group_var = NULL,
+  type = NULL,
+  statistic = NULL,
+  digits = NULL,
+  label = NULL
+)
 }
 \arguments{
 \item{data}{A data frame.}
@@ -20,6 +29,15 @@ If \code{NULL}, no group comparison or p-values are shown. Default is \code{NULL
 \item{type}{Optional formula list passed to \code{gtsummary::tbl_summary()}
 to override variable types, for example \code{list(dose ~ "continuous")}.
 When \code{NULL}, variable types are inferred.}
+
+\item{statistic}{Optional formula list of summary formats. When provided,
+it replaces the default formats, including the \code{specific_vars} format.}
+
+\item{digits}{Optional formula list specifying summary precision, for
+example \code{list(gtsummary::all_categorical() ~ c(0, 1))}.}
+
+\item{label}{Optional formula list of display labels, for example
+\code{list(age ~ "Age (years)")}.}
 }
 \value{
 A \code{gtsummary} table object.

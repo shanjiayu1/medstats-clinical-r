@@ -183,7 +183,7 @@ table1 <- make_table1(
 table1
 ```
 
-Use `type` to override automatic type inference, for example `type = list(marker ~ "continuous")`.
+Use `statistic`, `digits`, and `label` to control summary formats, precision, and display labels. Use `type` to override automatic type inference, for example `type = list(marker ~ "continuous")`.
 
 ![Example baseline table](image/README/1785225766077.png)
 
