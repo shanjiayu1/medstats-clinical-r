@@ -14,7 +14,18 @@ plot_meanse(
   ylab = "值",
   colors = c("#B5D1E8", "#EB938F", "#A3D9A5", "#F2C68F", "#D1B3DF"),
   single_color = "#B5D1E8",
-  test_method = NULL
+  test_method = NULL,
+  id_var = NULL,
+  ref_time = NULL,
+  p_adjust_method = "none",
+  event_value = 1,
+  show_ci = TRUE,
+  max_stars = 4L,
+  label_size = 6,
+  show_print = TRUE,
+  font_family = getOption("medstats.font_family", NULL),
+  latin_family = getOption("medstats.latin_family", NULL),
+  time_labels = NULL
 )
 }
 \arguments{
@@ -39,15 +50,56 @@ groups. Default is \code{c("#B5D1E8", "#EB938F", "#A3D9A5", "#F2C68F", "#D1B3DF"
 
 \item{single_color}{Character string. Color for single-group line. Default is \code{"#B5D1E8"}.}
 
-\item{test_method}{Character string or \code{NULL}. For a plot with exactly two groups,
-use \code{"t"} for Welch's two-sample t-test or \code{"wilcox"} for the Wilcoxon rank-sum
-test at each time point. Significant results are marked with stars. Default is \code{NULL}.}
+\item{test_method}{Character string or \code{NULL}. With two groups, \code{"t"} and
+\code{"wilcox"} compare independent groups at each time point. With one group,
+they perform paired t-tests and Wilcoxon signed-rank tests against
+\code{ref_time}. Single-group \code{"mcnemar"} performs exact McNemar tests.
+Default is \code{NULL}, which requests no tests.}
+
+\item{id_var}{Character string. Subject ID column, required for single-group
+tests. Each subject may have at most one row per observed time point.}
+
+\item{ref_time}{Single non-missing value matching the original time column.
+Reference visit for single-group tests, for example \code{0} or \code{"Day 0"}.}
+
+\item{p_adjust_method}{P-value adjustment method accepted by
+\code{\link[stats:p.adjust]{stats::p.adjust()}}. Default is \code{"none"}. Adjustment includes all requested
+comparisons in this call. Stars use adjusted p-values.}
+
+\item{event_value}{Nonzero numeric event code for \code{"mcnemar"}. Outcomes must
+be \code{0}, \code{event_value}, or missing. Default is \code{1}; use \code{100} for percentages.}
+
+\item{show_ci}{Logical. Show mean +/- 1.96 SE error bars. Default is \code{TRUE}.}
+
+\item{max_stars}{Integer from 1 to 4. Maximum number of significance stars.
+Default is \code{4}; use \code{3} to combine p < 0.001 into one category.}
+
+\item{label_size}{Positive number. Size of significance labels in mm.
+Default is \code{6}.}
+
+\item{show_print}{Logical. Print the plot before returning the result.
+Default is \code{TRUE}; use \code{FALSE} when saving the returned plot separately.}
+
+\item{font_family}{Font family for Chinese text. Defaults to the option
+\code{medstats.font_family}, or \code{NULL} to keep the original theme font.}
+
+\item{latin_family}{Font family for Latin text, numbers, and units. Defaults
+to the option \code{medstats.latin_family}, or \code{NULL}. Labels are plain text;
+mixed fonts are applied internally. Fonts must be installed locally.
+Use a system-font-capable device such as \code{ragg::agg_png}; base PDF devices
+do not support these fonts directly.
+Set both font arguments to \code{NULL} to retain the original theme fonts.}
+
+\item{time_labels}{Optional character labels in the order of the plotted
+numeric time points. Default is \code{NULL}, using numeric time values.}
 }
 \value{
 Invisibly returns a list with:
 \itemize{
 \item \code{summary_data}: data frame of computed means, SDs, SEs
-\item \code{test_data}: time-specific test results, or \code{NULL} when no test is requested
+\item \code{test_data}: time-specific test results with \code{p_value}, \code{p_adjusted},
+\code{p_adjust_method}, and \code{significance}, or \code{NULL} without tests.
+Single-group tests also return \code{paired_n}, \code{reference_time}, and \code{status}.
 \item \code{plot}: the ggplot object
 }
 }
@@ -59,7 +111,16 @@ interval error bars. Supports both single-group and multi-group comparisons.
 Time variable must contain extractable numeric values via \code{readr::parse_number()}.
 For multi-group plots, ensure \code{colors} has enough values for all groups.
 Significance labels use \code{*} for p < 0.05, \verb{**} for p < 0.01, \verb{***} for
-p < 0.001, and \verb{****} for p < 0.0001. Tests require exactly two groups.
+p < 0.001, and \verb{****} for p < 0.0001, capped by \code{max_stars}.
+Single-group comparisons match subjects by ID and remove missing outcomes
+separately for each pair of visits. Plot means use all available outcomes
+at each time point. Wilcoxon tests use a continuity-corrected normal
+approximation (\code{exact = FALSE}). Exact McNemar tests use a two-sided
+binomial test on discordant pairs, returning p = 1 when all pairs agree.
+Empty pairs return \code{NA} with status \code{"no_pairs"}; t/Wilcoxon tests with fewer
+than two pairs return \code{"insufficient_pairs"}. Constant paired differences
+make the t-test undefined (\code{"zero_variance"}). Missing IDs, duplicate
+subject-visits, invalid binary codes, and absent reference visits are errors.
 }
 \examples{
 \dontrun{
@@ -69,6 +130,14 @@ plot_meanse(
   time_var = "Time",
   group_var = "Diet",
   test_method = "wilcox"
+)
+
+plot_meanse(
+  data = ChickWeight,
+  target_var = "weight", time_var = "Time",
+  id_var = "Chick", ref_time = 0,
+  test_method = "wilcox", p_adjust_method = "bonferroni",
+  show_ci = FALSE
 )
 }
 

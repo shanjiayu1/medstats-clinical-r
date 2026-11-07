@@ -16,20 +16,59 @@
 #' @param colors Character vector. Colors for multi-group lines. Must have length >= number of
 #'   groups. Default is `c("#B5D1E8", "#EB938F", "#A3D9A5", "#F2C68F", "#D1B3DF")`.
 #' @param single_color Character string. Color for single-group line. Default is `"#B5D1E8"`.
-#' @param test_method Character string or `NULL`. For a plot with exactly two groups,
-#'   use `"t"` for Welch's two-sample t-test or `"wilcox"` for the Wilcoxon rank-sum
-#'   test at each time point. Significant results are marked with stars. Default is `NULL`.
+#' @param test_method Character string or `NULL`. With two groups, `"t"` and
+#'   `"wilcox"` compare independent groups at each time point. With one group,
+#'   they perform paired t-tests and Wilcoxon signed-rank tests against
+#'   `ref_time`. Single-group `"mcnemar"` performs exact McNemar tests.
+#'   Default is `NULL`, which requests no tests.
+#' @param id_var Character string. Subject ID column, required for single-group
+#'   tests. Each subject may have at most one row per observed time point.
+#' @param ref_time Single non-missing value matching the original time column.
+#'   Reference visit for single-group tests, for example `0` or `"Day 0"`.
+#' @param p_adjust_method P-value adjustment method accepted by
+#'   [stats::p.adjust()]. Default is `"none"`. Adjustment includes all requested
+#'   comparisons in this call. Stars use adjusted p-values.
+#' @param event_value Nonzero numeric event code for `"mcnemar"`. Outcomes must
+#'   be `0`, `event_value`, or missing. Default is `1`; use `100` for percentages.
+#' @param show_ci Logical. Show mean +/- 1.96 SE error bars. Default is `TRUE`.
+#' @param max_stars Integer from 1 to 4. Maximum number of significance stars.
+#'   Default is `4`; use `3` to combine p < 0.001 into one category.
+#' @param label_size Positive number. Size of significance labels in mm.
+#'   Default is `6`.
+#' @param show_print Logical. Print the plot before returning the result.
+#'   Default is `TRUE`; use `FALSE` when saving the returned plot separately.
+#' @param font_family Font family for Chinese text. Defaults to the option
+#'   `medstats.font_family`, or `NULL` to keep the original theme font.
+#' @param latin_family Font family for Latin text, numbers, and units. Defaults
+#'   to the option `medstats.latin_family`, or `NULL`. Labels are plain text;
+#'   mixed fonts are applied internally. Fonts must be installed locally.
+#'   Use a system-font-capable device such as `ragg::agg_png`; base PDF devices
+#'   do not support these fonts directly.
+#'   Set both font arguments to `NULL` to retain the original theme fonts.
+#' @param time_labels Optional character labels in the order of the plotted
+#'   numeric time points. Default is `NULL`, using numeric time values.
 #'
 #' @return Invisibly returns a list with:
 #'   - `summary_data`: data frame of computed means, SDs, SEs
-#'   - `test_data`: time-specific test results, or `NULL` when no test is requested
+#'   - `test_data`: time-specific test results with `p_value`, `p_adjusted`,
+#'     `p_adjust_method`, and `significance`, or `NULL` without tests.
+#'     Single-group tests also return `paired_n`, `reference_time`, and `status`.
 #'   - `plot`: the ggplot object
 #'
 #' @details
 #' Time variable must contain extractable numeric values via `readr::parse_number()`.
 #' For multi-group plots, ensure `colors` has enough values for all groups.
 #' Significance labels use `*` for p < 0.05, `**` for p < 0.01, `***` for
-#' p < 0.001, and `****` for p < 0.0001. Tests require exactly two groups.
+#' p < 0.001, and `****` for p < 0.0001, capped by `max_stars`.
+#' Single-group comparisons match subjects by ID and remove missing outcomes
+#' separately for each pair of visits. Plot means use all available outcomes
+#' at each time point. Wilcoxon tests use a continuity-corrected normal
+#' approximation (`exact = FALSE`). Exact McNemar tests use a two-sided
+#' binomial test on discordant pairs, returning p = 1 when all pairs agree.
+#' Empty pairs return `NA` with status `"no_pairs"`; t/Wilcoxon tests with fewer
+#' than two pairs return `"insufficient_pairs"`. Constant paired differences
+#' make the t-test undefined (`"zero_variance"`). Missing IDs, duplicate
+#' subject-visits, invalid binary codes, and absent reference visits are errors.
 #'
 #' @examples
 #' \dontrun{
@@ -40,8 +79,17 @@
 #'   group_var = "Diet",
 #'   test_method = "wilcox"
 #' )
+#'
+#' plot_meanse(
+#'   data = ChickWeight,
+#'   target_var = "weight", time_var = "Time",
+#'   id_var = "Chick", ref_time = 0,
+#'   test_method = "wilcox", p_adjust_method = "bonferroni",
+#'   show_ci = FALSE
+#' )
 #' }
 #'
+#' @importFrom rlang .data
 #' @export
 plot_meanse <- function(data,
                         group_var = NULL,
@@ -52,27 +100,62 @@ plot_meanse <- function(data,
                         ylab = "值",
                         colors = c("#B5D1E8", "#EB938F", "#A3D9A5", "#F2C68F", "#D1B3DF"),
                         single_color = "#B5D1E8",
-                        test_method = NULL) {
+                        test_method = NULL,
+                        id_var = NULL,
+                        ref_time = NULL,
+                        p_adjust_method = "none",
+                        event_value = 1,
+                        show_ci = TRUE,
+                        max_stars = 4L,
+                        label_size = 6,
+                        show_print = TRUE,
+                        font_family = getOption("medstats.font_family", NULL),
+                        latin_family = getOption("medstats.latin_family", NULL),
+                        time_labels = NULL) {
 
   is_single <- is.null(group_var)
 
   if (!is.null(test_method)) {
-    if (!is.character(test_method) || length(test_method) != 1L) {
-      stop("`test_method` must be `NULL`, \"t\", or \"wilcox\".", call. = FALSE)
+    if (!is.character(test_method) || length(test_method) != 1L || is.na(test_method)) {
+      stop("`test_method` must be NULL, \"t\", \"wilcox\", or \"mcnemar\".", call. = FALSE)
     }
     test_method <- tolower(test_method)
     if (test_method %in% c("t.test", "ttest")) test_method <- "t"
     if (test_method %in% c("wilcox.test", "wilcoxon")) test_method <- "wilcox"
-    if (!test_method %in% c("t", "wilcox")) {
-      stop("`test_method` must be `NULL`, \"t\", or \"wilcox\".", call. = FALSE)
+    if (!test_method %in% c("t", "wilcox", "mcnemar")) {
+      stop("`test_method` must be NULL, \"t\", \"wilcox\", or \"mcnemar\".", call. = FALSE)
     }
-    if (is_single) {
-      stop("`test_method` can only be used when `group_var` is supplied.", call. = FALSE)
+    if (!is_single && (test_method == "mcnemar" || !is.null(id_var) || !is.null(ref_time))) {
+      stop("Paired tests and reference visits require `group_var = NULL`.", call. = FALSE)
     }
+  }
+  if (!is.character(p_adjust_method) || length(p_adjust_method) != 1L ||
+      is.na(p_adjust_method) || !p_adjust_method %in% stats::p.adjust.methods) {
+    stop("`p_adjust_method` must be a method from stats::p.adjust.methods.", call. = FALSE)
+  }
+  if (!is.logical(show_ci) || length(show_ci) != 1L || is.na(show_ci)) {
+    stop("`show_ci` must be TRUE or FALSE.", call. = FALSE)
+  }
+  if (!is.numeric(max_stars) || length(max_stars) != 1L || is.na(max_stars) ||
+      !max_stars %in% 1:4) {
+    stop("`max_stars` must be an integer from 1 to 4.", call. = FALSE)
+  }
+  if (!is.numeric(label_size) || length(label_size) != 1L ||
+      !is.finite(label_size) || label_size <= 0) {
+    stop("`label_size` must be a finite positive number.", call. = FALSE)
+  }
+  if (!is.logical(show_print) || length(show_print) != 1L || is.na(show_print)) {
+    stop("`show_print` must be TRUE or FALSE.", call. = FALSE)
+  }
+
+  test_df <- NULL
+  if (is_single && !is.null(test_method)) {
+    test_df <- meanse_paired_tests(data, target_var, time_var, id_var,
+                                 ref_time, test_method, event_value)
   }
 
   if (is_single) {
-    group_var <- "dummy_group_var"
+    group_var <- make.unique(c(names(data), "dummy_group_var"))[ncol(data) + 1L]
     data[[group_var]] <- "全体患者"
   }
 
@@ -94,10 +177,18 @@ plot_meanse <- function(data,
       time_num = readr::parse_number(as.character(!!time_sym))
     )
 
-  test_df <- NULL
   annotation_df <- NULL
 
-  if (!is.null(test_method)) {
+  lower <- summary_df$target_mean
+  upper <- summary_df$target_mean
+  if (show_ci) {
+    lower <- lower - 1.96 * summary_df$target_se
+    upper <- upper + 1.96 * summary_df$target_se
+    lower <- dplyr::coalesce(replace(lower, !is.finite(lower), NA_real_), summary_df$target_mean)
+    upper <- dplyr::coalesce(replace(upper, !is.finite(upper), NA_real_), summary_df$target_mean)
+  }
+
+  if (!is.null(test_method) && !is_single) {
     test_input <- data |>
       dplyr::filter(
         !is.na(!!group_sym),
@@ -144,26 +235,33 @@ plot_meanse <- function(data,
           stringsAsFactors = FALSE
         )
       }) |>
-      dplyr::ungroup() |>
+      dplyr::ungroup()
+  }
+
+  if (!is.null(test_method)) {
+    test_df <- test_df |>
       dplyr::mutate(
+        p_adjusted = stats::p.adjust(p_value, method = p_adjust_method, n = nrow(test_df)),
+        p_adjust_method = p_adjust_method,
         significance = dplyr::case_when(
-          is.na(p_value) ~ "",
-          p_value < 0.0001 ~ "****",
-          p_value < 0.001 ~ "***",
-          p_value < 0.01 ~ "**",
-          p_value < 0.05 ~ "*",
+          is.na(.data$p_adjusted) ~ "",
+          .data$p_adjusted < 0.0001 ~ "****",
+          .data$p_adjusted < 0.001 ~ "***",
+          .data$p_adjusted < 0.01 ~ "**",
+          .data$p_adjusted < 0.05 ~ "*",
           TRUE ~ ""
         ),
+        significance = substr(significance, 1L, max_stars),
         time_num = readr::parse_number(as.character(!!time_sym))
       )
 
     plotted_values <- c(
-      summary_df$target_mean - 1.96 * summary_df$target_se,
-      summary_df$target_mean + 1.96 * summary_df$target_se,
+      lower,
+      upper,
       summary_df$target_mean
     )
     plotted_values <- plotted_values[is.finite(plotted_values)]
-    y_span <- diff(range(plotted_values))
+    y_span <- if (length(plotted_values)) diff(range(plotted_values)) else 0
     annotation_offset <- if (is.finite(y_span) && y_span > 0) {
       y_span * 0.08
     } else {
@@ -172,12 +270,9 @@ plot_meanse <- function(data,
 
     annotation_positions <- summary_df |>
       dplyr::mutate(
-        .upper = dplyr::if_else(
-          is.finite(target_mean + 1.96 * target_se),
-          target_mean + 1.96 * target_se,
-          target_mean
-        )
+        .upper = upper
       ) |>
+      dplyr::filter(is.finite(.upper)) |>
       dplyr::group_by(!!time_sym) |>
       dplyr::summarise(y_position = max(.upper, na.rm = TRUE), .groups = "drop")
 
@@ -187,24 +282,38 @@ plot_meanse <- function(data,
       dplyr::mutate(y_position = y_position + annotation_offset)
   }
 
-  min_val <- min(summary_df$target_mean - 1.96 * summary_df$target_se, na.rm = TRUE)
+  if (!any(is.finite(lower))) {
+    stop("No finite outcomes are available to plot.", call. = FALSE)
+  }
+  min_val <- min(lower[is.finite(lower)])
   auto_ymin <- ifelse(min_val > 0, min_val - min_val * 0.1, min_val + min_val * 0.1)
 
   unique_times <- sort(unique(summary_df$time_num))
+  if (!is.null(time_labels) && (!is.character(time_labels) || anyNA(time_labels) ||
+      length(time_labels) != length(unique_times))) {
+    stop("`time_labels` must have one character label per plotted time point.", call. = FALSE)
+  }
   min_time <- min(unique_times, na.rm = TRUE)
   max_time <- max(unique_times, na.rm = TRUE)
   x_padding <- max(1, (max_time - min_time) * 0.05)
 
   p <- summary_df |>
     ggplot2::ggplot(ggplot2::aes(x = time_num, y = target_mean,
-                                   group = !!group_sym, color = !!group_sym, shape = !!group_sym)) +
-    ggplot2::geom_errorbar(
+                                   group = !!group_sym, color = !!group_sym, shape = !!group_sym))
+  if (show_ci) {
+    p <- p + ggplot2::geom_errorbar(
       ggplot2::aes(ymin = target_mean - 1.96 * target_se, ymax = target_mean + 1.96 * target_se),
       width = (max_time - min_time) * 0.02,
-      na.rm = TRUE) +
+      na.rm = TRUE)
+  }
+  p <- p +
     ggplot2::geom_line(linewidth = 0.8, na.rm = TRUE) +
     ggplot2::geom_point(size = 3, na.rm = TRUE) +
-    ggplot2::scale_x_continuous(breaks = unique_times, expand = c(0, 0)) +
+    ggplot2::scale_x_continuous(
+      breaks = unique_times,
+      labels = if (is.null(time_labels)) ggplot2::waiver() else time_labels,
+      expand = if (is.null(time_labels)) c(0, 0) else ggplot2::expansion(mult = 0.08)
+    ) +
     ggplot2::scale_y_continuous(expand = c(0, 0)) +
     ggplot2::coord_cartesian(xlim = c(min_time - x_padding / 2, max_time + x_padding),
                               ylim = c(auto_ymin, NA), clip = "off") +
@@ -221,7 +330,8 @@ plot_meanse <- function(data,
         ggplot2::aes(x = time_num, y = y_position, label = significance),
         inherit.aes = FALSE,
         color = "black",
-        size = 6,
+        size = label_size,
+        family = if (is.null(latin_family)) "" else latin_family,
         fontface = "bold",
         vjust = 0
       )
@@ -231,14 +341,14 @@ plot_meanse <- function(data,
     p <- p +
       ggplot2::scale_color_manual(values = single_color) +
       ggplot2::theme(legend.position = "none")
-    summary_df <- summary_df |> dplyr::select(-dummy_group_var)
+    summary_df <- summary_df |> dplyr::select(-dplyr::all_of(group_var))
   } else {
     p <- p +
       ggplot2::scale_color_manual(values = colors) +
       ggplot2::labs(color = legend_title, shape = legend_title) +
       ggplot2::guides(
-        color = ggplot2::guide_legend(title.position = "left", title.vjust = 0.5),
-        shape = ggplot2::guide_legend(title.position = "left", title.vjust = 0.5)
+        color = ggplot2::guide_legend(title.position = "left"),
+        shape = ggplot2::guide_legend(title.position = "left")
       ) +
       ggplot2::theme(
         legend.position = "top",
@@ -250,10 +360,105 @@ plot_meanse <- function(data,
       )
   }
 
-  print(p)
+  p <- plot_font_theme(p, font_family, latin_family)
+  if (show_print) {
+    print(p)
+  }
   invisible(list(summary_data = summary_df, test_data = test_df, plot = p))
 }
 
+
+meanse_paired_tests <- function(data, target_var, time_var, id_var,
+                                ref_time, test_method, event_value) {
+  if (!is.character(id_var) || length(id_var) != 1L || is.na(id_var) ||
+      !id_var %in% names(data)) {
+    stop("Single-group tests require `id_var` naming a subject ID column.", call. = FALSE)
+  }
+  if (length(ref_time) != 1L || anyNA(ref_time) ||
+      !as.character(ref_time) %in% as.character(data[[time_var]])) {
+    stop("`ref_time` must match one observed value in the time column.", call. = FALSE)
+  }
+  if (anyNA(data[[id_var]])) {
+    stop("Subject IDs must not be missing for paired tests.", call. = FALSE)
+  }
+  outcome <- data[[target_var]]
+  if ((!is.numeric(outcome) && !is.logical(outcome)) ||
+      any(!is.finite(outcome) & !is.na(outcome))) {
+    stop("Paired tests require numeric or logical outcomes with finite observed values.", call. = FALSE)
+  }
+  if (test_method == "mcnemar") {
+    if ((!is.numeric(event_value) && !is.logical(event_value)) ||
+        length(event_value) != 1L || !is.finite(event_value) || event_value == 0) {
+      stop("`event_value` must be a finite nonzero numeric event code.", call. = FALSE)
+    }
+    if (any(!is.na(outcome) & !outcome %in% c(0, event_value))) {
+      stop("McNemar outcomes must be 0, `event_value`, or missing.", call. = FALSE)
+    }
+  }
+
+  values <- tibble::tibble(
+    .pair_id = data[[id_var]],
+    .visit = data[[time_var]],
+    .value = outcome
+  ) |>
+    dplyr::filter(!is.na(.data$.visit))
+  if (anyDuplicated(values[c(".pair_id", ".visit")])) {
+    stop("Each subject must have at most one row per time point for paired tests.", call. = FALSE)
+  }
+  visits <- unique(as.character(values$.visit))
+  numeric_visits <- suppressWarnings(readr::parse_number(visits))
+  if (any(!is.finite(numeric_visits)) || anyDuplicated(numeric_visits)) {
+    stop("Paired-test time values must map to distinct finite numeric positions.", call. = FALSE)
+  }
+  if (length(visits) < 2L) {
+    stop("Paired tests require at least one non-reference time point.", call. = FALSE)
+  }
+  reference <- values |>
+    dplyr::filter(as.character(.data$.visit) == as.character(ref_time)) |>
+    dplyr::transmute(.pair_id = .data$.pair_id, .reference = .data$.value)
+
+  result <- values |>
+    dplyr::filter(as.character(.data$.visit) != as.character(ref_time)) |>
+    dplyr::left_join(reference, by = ".pair_id") |>
+    dplyr::group_by(.data$.visit) |>
+    dplyr::group_modify(function(.x, .y) {
+      pairs <- .x[stats::complete.cases(.x[c(".value", ".reference")]), ]
+      differences <- pairs$.value - pairs$.reference
+      paired_n <- nrow(pairs)
+      status <- "ok"
+      p_value <- NA_real_
+      if (paired_n == 0L) {
+        status <- "no_pairs"
+      } else if (test_method == "mcnemar") {
+        gained <- sum(pairs$.value == event_value & pairs$.reference == 0)
+        lost <- sum(pairs$.value == 0 & pairs$.reference == event_value)
+        p_value <- if (gained + lost == 0L) 1 else stats::binom.test(gained, gained + lost)$p.value
+      } else if (paired_n < 2L) {
+        status <- "insufficient_pairs"
+      } else if (test_method == "t") {
+        if (stats::sd(differences) == 0) {
+          status <- "zero_variance"
+        } else {
+          p_value <- stats::t.test(differences)$p.value
+        }
+      } else if (all(differences == 0)) {
+        p_value <- 1
+      } else {
+        p_value <- stats::wilcox.test(differences, exact = FALSE)$p.value
+      }
+      data.frame(
+        reference_time = ref_time,
+        paired_n = paired_n,
+        method = test_method,
+        p_value = p_value,
+        status = status,
+        stringsAsFactors = FALSE
+      )
+    }) |>
+    dplyr::ungroup()
+  names(result)[names(result) == ".visit"] <- time_var
+  result
+}
 
 #' Plot stacked percentage bar chart
 #'
@@ -280,6 +485,9 @@ plot_meanse <- function(data,
 #'   Default is `0.03`.
 #' @param label_size Numeric. Font size of percentage labels inside the bars.
 #'   Default is `4`.
+#' @param show_print Logical. Automatically print the plot when `TRUE` (default).
+#'   Set to `FALSE` to return the result without opening a graphics device.
+#' @inheritParams plot_meanse
 #'
 #' @return Invisibly returns a list with:
 #'   - `summary_data`: data frame of computed percentages
@@ -321,8 +529,14 @@ plot_stacked <- function(data,
                          ylab = "百分比 (%)",
                          label_threshold = 0.03,
                          group_var = NULL,
-                         label_size = 4) {
+                         label_size = 4,
+                         show_print = TRUE,
+                         font_family = getOption("medstats.font_family", NULL),
+                         latin_family = getOption("medstats.latin_family", NULL)) {
 
+  if (!is.logical(show_print) || length(show_print) != 1L || is.na(show_print)) {
+    stop("`show_print` must be TRUE or FALSE.", call. = FALSE)
+  }
   if (length(breaks) != length(labels) + 1L) {
     stop("`breaks` must contain exactly one more value than `labels`.", call. = FALSE)
   }
@@ -434,7 +648,7 @@ plot_stacked <- function(data,
       position = ggplot2::position_stack(vjust = 0.5),
       color = "white",
       size = label_size,
-      family = "sans"
+      family = if (is.null(latin_family)) "sans" else latin_family
     ) +
     ggplot2::scale_fill_manual(values = colors) +
     ggplot2::scale_y_continuous(
@@ -471,6 +685,16 @@ plot_stacked <- function(data,
       ggplot2::theme(axis.text.x = ggplot2::element_text(size = 9))
   }
 
-  print(p_bar)
+  if (!is_grouped) {
+    p_bar <- p_bar + if (is.numeric(analysis_data[[time_var]])) {
+      ggplot2::scale_x_continuous()
+    } else {
+      ggplot2::scale_x_discrete()
+    }
+  }
+  p_bar <- plot_font_theme(p_bar, font_family, latin_family)
+  if (show_print) {
+    print(p_bar)
+  }
   invisible(list(summary_data = plot_data, plot = p_bar))
 }

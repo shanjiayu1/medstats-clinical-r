@@ -43,7 +43,7 @@ library(medstats)
 | 统计建模   | `longdata_analysis()`       | 使用描述性统计、组间比较和 GEE 模型分析重复测量数据。                           |
 | 统计建模   | `run_glm_auto()`            | 自动完成单因素和多因素广义线性模型分析。                                        |
 | 统计建模   | `run_cox_auto()`            | 自动完成单因素和多因素 Cox 回归分析。                                           |
-| 数据可视化 | `plot_meanse()`             | 绘制各组均值及标准误随时间变化的折线图。                                        |
+| 数据可视化 | `plot_meanse()`             | 绘制随时间变化的均值及近似 95% 置信区间。                                      |
 | 数据可视化 | `plot_stacked()`            | 绘制不同时间点类别百分比堆积柱状图。                                            |
 | 数据可视化 | `plot_km()`                 | 绘制 Kaplan–Meier 累积事件曲线，并可显示风险表。                               |
 | 数据可视化 | `plot_sankey()`             | 展示不同时间点之间的状态转移。                                                  |
@@ -275,7 +275,7 @@ format_flextable(cox_results)
 
 ## 数据可视化
 
-### 均值 ± 标准误折线图
+### 均值趋势及 95% 置信区间
 
 ```r
 growth_data <- datasets::ChickWeight |>
@@ -296,9 +296,12 @@ meanse_result <- plot_meanse(
 )
 ```
 
-对于两组数据，可以设置 `test_method = "t"` 或
-`test_method = "wilcox"`，在每个时间点比较两组。具有统计学意义的结果
-会标注在对应时间点上方，具体 p 值则返回在 `test_data` 中。
+误差线为均值 ± 1.96 × SE。`summary_data` 返回每组各时点的均值、SD、SE 和有效样本量。使用数值时间列时，可将基线编码为 `0`。
+
+对于两组独立样本，`test_method = "t"` 在各时点执行 Welch t 检验，
+`test_method = "wilcox"` 执行 Wilcoxon 秩和检验。
+`p_adjust_method = "none"` 为默认值。设为 `"bonferroni"` 或 `"holm"` 等方法后，
+对本次调用的全部比较进行校正。星号使用 `test_data$p_adjusted`，原始 P 值保存在 `p_value` 中。
 
 ```r
 two_diet_result <- plot_meanse(
@@ -313,7 +316,33 @@ two_diet_result <- plot_meanse(
 two_diet_result$test_data
 ```
 
-![均值与标准误折线图](image/README/1785225730190.png)
+单组各时点与参照时点比较时，传入患者 ID 列 `id_var` 和参照值 `ref_time`，
+函数先按 ID 配对。此时 `"t"` 执行配对 t 检验，`"wilcox"` 执行配对 Wilcoxon 符号秩检验。
+
+```r
+paired_result <- plot_meanse(
+  data = datasets::ChickWeight,
+  target_var = "weight", time_var = "Time",
+  id_var = "Chick", ref_time = 0,
+  test_method = "wilcox", p_adjust_method = "bonferroni",
+  show_ci = FALSE, max_stars = 3,
+  xlab = "Day", ylab = "Mean weight (g)"
+)
+paired_result$test_data
+```
+
+`paired_n` 为两时点均有有效结局的配对人数，图上每个均值点使用该时点的全部有效记录。
+ID 缺失或同一 ID、同一时点存在重复行时会报错。无法形成有效配对的比较返回 `NA`，
+并在 `status` 中说明原因。
+
+二分类结局设置 `test_method = "mcnemar"`，执行双侧精确 McNemar 检验。
+默认编码为 0/1，0/100 数据需传入 `event_value = 100`，其均值即百分比。
+精确二项计算只使用不一致配对，无不一致配对时返回 P = 1。
+`show_ci = FALSE` 隐藏误差线，并将显著性星号放在均值点上方。
+`label_size` 设置显著性标签字号，`show_print = FALSE` 返回结果而不自动打印图。
+可直接给返回的 `plot` 添加 ggplot2 样式，并用 `ggsave()` 保存。
+
+![均值及置信区间折线图](image/README/1785225730190.png)
 
 ### 百分比堆积柱状图
 
@@ -339,7 +368,19 @@ stacked_result <- plot_stacked(
 
 设置 `group_var = NULL`（默认值）时，每个时间点只绘制一个堆积柱。
 提供分组变量后，百分比会在每个“时间 × 组别”组合内分别计算，
-各组堆积柱会并排显示。使用 `label_size` 调整柱内百分比标签的字号。
+各组堆积柱会并排显示。结局或时间缺失的行从分母中排除。`label_threshold` 和 `label_size` 控制柱内百分比标签。
+设置 `show_print = FALSE` 可关闭自动打印，直接用 `stacked_result$plot` 保存图片或导出 Word，无需临时绘图设备。
+
+`plot_meanse()` 和 `plot_stacked()` 内部统一处理中英文混排：中文
+`font_family = "SimSun"`（宋体），英文、数字和单位
+`latin_family = "Times New Roman"`。本机需安装对应字体，也可通过参数更换；
+默认保留原主题字体，也可在分析开头一次设置
+`options(medstats.font_family = "SimSun", medstats.latin_family = "Times New Roman")`。
+使用支持系统字体的绘图设备，如 `ragg::agg_png`；基础 PDF 设备不直接支持这些系统字体。
+标签直接写普通文字，例如
+`ylab = "平均ADL评分（分）"`，不需要 HTML 或外部字体注册。折线图可用
+`time_labels = c("基线", "周期1", "周期2")` 按绘制顺序指定横轴文字。
+若已按研究规定划分剂量组，可传入整数分组编码，并在相邻编码的中点设分界，以保留原有分组。`summary_data` 返回各类别计数和比例。
 
 ![百分比堆积柱状图](image/README/1787983129815.png)
 

@@ -17,7 +17,10 @@ plot_stacked(
   ylab = "百分比 (\%)",
   label_threshold = 0.03,
   group_var = NULL,
-  label_size = 4
+  label_size = 4,
+  show_print = TRUE,
+  font_family = getOption("medstats.font_family", NULL),
+  latin_family = getOption("medstats.latin_family", NULL)
 )
 }
 \arguments{
@@ -52,6 +55,19 @@ calculated separately for each time-by-group combination. Default is \code{NULL}
 
 \item{label_size}{Numeric. Font size of percentage labels inside the bars.
 Default is \code{4}.}
+
+\item{show_print}{Logical. Automatically print the plot when \code{TRUE} (default).
+Set to \code{FALSE} to return the result without opening a graphics device.}
+
+\item{font_family}{Font family for Chinese text. Defaults to the option
+\code{medstats.font_family}, or \code{NULL} to keep the original theme font.}
+
+\item{latin_family}{Font family for Latin text, numbers, and units. Defaults
+to the option \code{medstats.latin_family}, or \code{NULL}. Labels are plain text;
+mixed fonts are applied internally. Fonts must be installed locally.
+Use a system-font-capable device such as \code{ragg::agg_png}; base PDF devices
+do not support these fonts directly.
+Set both font arguments to \code{NULL} to retain the original theme fonts.}
 }
 \value{
 Invisibly returns a list with:

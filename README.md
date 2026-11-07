@@ -46,7 +46,7 @@ tests, and vignettes.
 | Modeling        | `longdata_analysis()`       | Analyze repeated measurements using descriptive statistics, group comparisons, and GEE models.           |
 | Modeling        | `run_glm_auto()`            | Run automated univariable and multivariable generalized linear models.                                   |
 | Modeling        | `run_cox_auto()`            | Run automated univariable and multivariable Cox regression.                                              |
-| Visualization   | `plot_meanse()`             | Plot group-specific means with standard errors over time.                                                |
+| Visualization   | `plot_meanse()`             | Plot means over time with approximate 95% confidence intervals.                                         |
 | Visualization   | `plot_stacked()`            | Plot category percentages as stacked bars over time.                                                     |
 | Visualization   | `plot_km()`                 | Draw Kaplan–Meier cumulative event curves with an optional risk table.                                  |
 | Visualization   | `plot_sankey()`             | Visualize transitions between states across time points.                                                 |
@@ -277,7 +277,7 @@ format_flextable(cox_results)
 
 ## Data visualization
 
-### Mean ± standard error line plot
+### Mean trend with 95% confidence intervals
 
 ```r
 growth_data <- datasets::ChickWeight |>
@@ -296,14 +296,19 @@ meanse_result <- plot_meanse(
   ylab = "Mean weight (g)",
   legend_title = "Diet"
 )
-#保存图片
-ggsave(meanse_result$plot, file = "meanse_plot.png", width = 6, height = 5)
+ggplot2::ggsave("meanse_plot.png", plot = meanse_result$plot, width = 6, height = 5)
 
 ```
 ![1788247119961](image/README/1788247119961.png)
-For two-group data, set `test_method = "t"` or `test_method = "wilcox"` to
-compare the groups at every time point. Significant results are marked above
-the corresponding time point, and the p-values are returned in `test_data`.
+Error bars use mean ± 1.96 × SE. The `summary_data` component includes the
+mean, SD, SE, and valid sample count for each group and time point. A numeric
+time column can encode baseline as `0`.
+
+With two independent groups, `test_method = "t"` runs Welch's t-test and
+`test_method = "wilcox"` runs the Wilcoxon rank-sum test at each time point.
+By default, `p_adjust_method = "none"` keeps unadjusted p-values. Set an
+adjustment such as `"bonferroni"` or `"holm"` to adjust all comparisons in the
+call. Stars use `test_data$p_adjusted`; `p_value` retains the raw p-value.
 
 ```r
 two_diet_result <- plot_meanse(
@@ -317,6 +322,36 @@ two_diet_result <- plot_meanse(
 
 two_diet_result$test_data
 ```
+
+For a single group, supply `id_var` and `ref_time` to compare each follow-up
+with the reference visit, matching subjects by ID. Here `"t"` requests a paired
+t-test and `"wilcox"` requests a paired Wilcoxon signed-rank test.
+
+```r
+paired_result <- plot_meanse(
+  data = datasets::ChickWeight,
+  target_var = "weight", time_var = "Time",
+  id_var = "Chick", ref_time = 0,
+  test_method = "wilcox", p_adjust_method = "bonferroni",
+  show_ci = FALSE, max_stars = 3,
+  xlab = "Day", ylab = "Mean weight (g)"
+)
+paired_result$test_data
+```
+
+`paired_n` is the number of subjects with valid outcomes at both visits;
+each plotted mean uses all valid outcomes at that visit. Duplicate subject-visit
+records and missing IDs raise errors. Comparisons without usable pairs return
+`NA` with a `status` explaining the result.
+
+For binary outcomes, use `test_method = "mcnemar"` for the exact two-sided
+McNemar test. The default encoding is 0/1; set `event_value = 100` for 0/100
+outcomes whose mean is a percentage. Only discordant pairs enter the exact
+binomial calculation; comparisons with no discordant pairs return p = 1.
+`show_ci = FALSE` hides error bars and positions stars above the mean.
+Use `label_size` to set the significance-label size and `show_print = FALSE`
+to return the result without automatically printing a plot. The returned
+`plot` can be styled with ggplot2 and saved with `ggsave()` directly.
 
 ![1788247181647](image/README/1788247181647.png)
 
@@ -345,7 +380,24 @@ stacked_result <- plot_stacked(
 Set `group_var = NULL` (the default) to draw one stacked bar per time point.
 When a grouping column is supplied, percentages are calculated within each
 time-by-group combination and the group stacks are drawn side by side.
-Use `label_size` to adjust the percentage-label font size inside the bars.
+Rows with missing outcomes or time labels are excluded from the denominator.
+Use `label_threshold` and `label_size` to control the percentage labels.
+Set `show_print = FALSE` to return the result without automatically printing;
+use `stacked_result$plot` directly for saving or Word export.
+
+Both `plot_meanse()` and `plot_stacked()` can format plain labels internally using
+`font_family = "SimSun"` for Chinese and `latin_family = "Times New Roman"`
+for Latin text, digits, and units. Install these fonts locally or choose other
+families. Both arguments default to `NULL` to keep the original theme fonts.
+Set `options(medstats.font_family = "SimSun", medstats.latin_family = "Times New Roman")`
+once per session to apply these fonts to all subsequent line and stacked plots.
+Use a system-font-capable rendering device such as `ragg::agg_png`; base PDF
+devices do not support these system fonts directly.
+For line charts, supply `time_labels = c("Baseline", "Cycle 1", "Cycle 2")`
+in plotted time order; labels do not need HTML or external font registration.
+If categories were already assigned using study-specific cutoffs, pass their
+integer codes and use breaks halfway between adjacent codes to retain those
+assignments. `summary_data` returns the category counts and proportions.
 
 ![1787983129815](image/README/1787983129815.png)
 

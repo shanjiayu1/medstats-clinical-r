@@ -14,6 +14,8 @@ Imports:
     dplyr,
     tidyr,
     ggplot2,
+    ggtext,
+    systemfonts,
     purrr,
     stringr,
     tibble,
@@ -41,3 +43,4 @@ Suggests:
     TH.data
 Config/testthat/edition: 3
 VignetteBuilder: knitr
+Config/roxygen2/version: 8.0.0
